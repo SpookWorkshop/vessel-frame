@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vessel-frame-core"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = ["toml>=0.10.2"]
+
+[project.scripts]
+vf = "vf_core.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
