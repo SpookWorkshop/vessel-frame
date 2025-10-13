@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "com-message-source"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = ["pyserial>=3.5"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.entry-points."vesselframe.plugins.messagesource"]
+com_message_source = "com_message_source:make_plugin"
