@@ -3,8 +3,10 @@ import asyncio
 import signal
 import sys
 from contextlib import suppress
+from pathlib import Path
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
+from .config_manager import ConfigManager
 
 # ---- Quick subscriber for testing message plugins work
 TOPIC = "ais.raw"
@@ -15,12 +17,24 @@ async def printer(bus: MessageBus) -> None:
 # ----
 
 async def run(argv: list[str] | None = None) -> int:
+    config_path = Path("config.toml")
+
+    config_manager = ConfigManager(config_path)
     bus = MessageBus()
     pm = PluginManager(bus)
 
-    # TODO: Indicate the message source in a config
-    source = pm.create("mock_message_source", topic=TOPIC)
-    await source.start()
+    config_manager.load()
+
+    configured_sources = config_manager.get("ais-messages.sources")
+    for s in configured_sources:
+        source_config = config_manager.get(s)
+
+        if source_config and isinstance(source_config, dict):
+            source = pm.create(s, **source_config)
+        else:
+            source = pm.create(s)
+        
+        await source.start()
 
     # Hook up the print subscriber
     printer_task = asyncio.create_task(printer(bus))
