@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ais-decoder-processor"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies=["pyais>=2.13.2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.entry-points."vesselframe.plugins.messageprocessors"]
+ais_decoder_processor = "ais_decoder_processor:make_plugin"
