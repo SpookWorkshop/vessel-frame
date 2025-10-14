@@ -9,6 +9,8 @@ from .plugin_types import Plugin
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
 from .config_manager import ConfigManager
+from .vessel_manager import VesselManager
+from .vessel_repository import VesselRepository
 
 async def run(argv: list[str] | None = None) -> int:
     logger:logging.Logger = logging.getLogger(__name__)
@@ -19,6 +21,8 @@ async def run(argv: list[str] | None = None) -> int:
     config_manager = ConfigManager(config_path)
     bus = MessageBus()
     pm = PluginManager(bus)
+    vessel_repo = VesselRepository("db.sqlite")
+    vm = VesselManager(bus, vessel_repo, in_topic="ais.decoded")
 
     try:
         config_manager.load()
@@ -29,6 +33,8 @@ async def run(argv: list[str] | None = None) -> int:
     # Track all plugins for cleanup
     sources: list[Plugin] = []
     processors: list[Plugin] = []
+
+    await vm.start()
 
     # Load and start sources
     configured_sources = config_manager.get("ais-messages.sources", [])
@@ -72,26 +78,30 @@ async def run(argv: list[str] | None = None) -> int:
             loop.add_signal_handler(sig, stop_event.set)
 
     logger.info("System running. Press Ctrl+C to stop.")
+
     try:
         await stop_event.wait()
-    except KeyboardInterrupt:
-        print("\nShutdown requested...")
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        pass
+    finally:
+        logger.info("Shutting down...")
+        await vm.stop()
 
-    # Cleanup all plugins
-    print("Stopping plugins...")
-    for source in sources:
-        try:
-            await source.stop()
-        except Exception as e:
-            print(f"Error stopping source: {e}")
-    
-    for processor in processors:
-        try:
-            await processor.stop()
-        except Exception as e:
-            print(f"Error stopping processor: {e}")
-    
-    print("Shutdown complete.")
+        # Cleanup all plugins
+        logger.info("Stopping plugins...")
+        for source in sources:
+            try:
+                await source.stop()
+            except Exception as e:
+                print(f"Error stopping source: {e}")
+        
+        for processor in processors:
+            try:
+                await processor.stop()
+            except Exception as e:
+                print(f"Error stopping processor: {e}")
+        
+        logger.info("Shutdown complete.")
     return 0
 
 def main(argv: list[str] | None = None) -> int:
