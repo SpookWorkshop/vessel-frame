@@ -3,6 +3,7 @@ import asyncio
 import signal
 import sys
 from pathlib import Path
+import logging
 
 from .plugin_types import Plugin
 from .message_bus import MessageBus
@@ -10,6 +11,9 @@ from .plugin_manager import PluginManager
 from .config_manager import ConfigManager
 
 async def run(argv: list[str] | None = None) -> int:
+    logger:logging.Logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO, handlers=[logging.FileHandler('vessel_frame.log'),logging.StreamHandler()],format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",datefmt="%Y-%m-%d %H:%M:%S")
+
     config_path = Path("config.toml")
 
     config_manager = ConfigManager(config_path)
@@ -19,7 +23,7 @@ async def run(argv: list[str] | None = None) -> int:
     try:
         config_manager.load()
     except Exception as e:
-        print(f"Failed to load config from {config_path}: {e}")
+        logger.exception(f"Failed to load config from {config_path}", exc_info=e)
         return 1
 
     # Track all plugins for cleanup
@@ -36,7 +40,8 @@ async def run(argv: list[str] | None = None) -> int:
             source = pm.create("vesselframe.plugins.messagesource", s, **kwargs)
             await source.start()
             sources.append(source)
-            print(f"Started source: {s}")
+
+            logger.info(f"Started source: {s}")
         except Exception as e:
             print(f"Failed to start source '{s}': {e}")
 
@@ -50,9 +55,9 @@ async def run(argv: list[str] | None = None) -> int:
             processor = pm.create("vesselframe.plugins.messageprocessors", p, **kwargs)
             await processor.start()
             processors.append(processor)
-            print(f"Started processor: {p}")
+            logger.info(f"Started processor: {p}")
         except Exception as e:
-            print(f"Failed to start processor '{p}': {e}")
+            logger.exception(f"Failed to start processor '{p}'", exc_info=e)
 
     if not sources:
         print("No sources started. Exiting.")
@@ -66,8 +71,7 @@ async def run(argv: list[str] | None = None) -> int:
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, stop_event.set)
 
-    print("System running. Press Ctrl+C to stop.")
-    
+    logger.info("System running. Press Ctrl+C to stop.")
     try:
         await stop_event.wait()
     except KeyboardInterrupt:
