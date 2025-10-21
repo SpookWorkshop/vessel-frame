@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 import logging
 
-from .plugin_types import Plugin
+from .plugin_types import Plugin, RendererPlugin
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
 from .config_manager import ConfigManager
@@ -42,6 +42,7 @@ async def run(argv: list[str] | None = None) -> int:
         try:
             source_config = config_manager.get(s)
             kwargs = source_config if isinstance(source_config, dict) else {}
+            kwargs["bus"] = bus
             
             source = pm.create("vesselframe.plugins.messagesource", s, **kwargs)
             await source.start()
@@ -57,6 +58,7 @@ async def run(argv: list[str] | None = None) -> int:
         try:
             processor_config = config_manager.get(p)
             kwargs = processor_config if isinstance(processor_config, dict) else {}
+            kwargs["bus"] = bus
             
             processor = pm.create("vesselframe.plugins.messageprocessors", p, **kwargs)
             await processor.start()

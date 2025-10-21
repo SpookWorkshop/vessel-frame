@@ -63,13 +63,16 @@ class MockMessageSource(Plugin):
     
     def __init__(
         self,
-        bus: MessageBus,
         *,
+        bus: MessageBus,
         topic: str = "ais.raw",
         messages: list[str] | None = None,
         min_delay: float = 0.5,
         max_delay: float = 5.0,
     ) -> None:
+        if bus is None:
+            raise ValueError("AIS Decoder Processor requires MessageBus")
+        
         self.bus = bus
         self.topic = topic
         self.messages = messages or DEFAULT_MESSAGES
@@ -100,10 +103,10 @@ class MockMessageSource(Plugin):
             idx = (idx + 1) % len(self.messages)
             await asyncio.sleep(random.uniform(self.min_delay, self.max_delay))
 
-def make_plugin(bus: MessageBus, **kwargs: Any) -> Plugin:
+def make_plugin(**kwargs: Any) -> Plugin:
     """
     Factory function required by the entry point.
     Receives the MessageBus from the core.
     """
 
-    return MockMessageSource(bus, **kwargs)
+    return MockMessageSource(**kwargs)

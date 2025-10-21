@@ -9,12 +9,15 @@ from vf_core.plugin_types import Plugin
 class COMMessageSource(Plugin):
     def __init__(
         self,
-        bus: MessageBus,
         *,
+        bus: MessageBus,
         topic: str = "ais.raw",
         baud: int = 38400,
         port: str = None
     ) -> None:
+        if bus is None:
+            raise ValueError("AIS Decoder Processor requires MessageBus")
+        
         self.bus = bus
         self.topic = topic
         self.baud = baud
@@ -55,10 +58,10 @@ class COMMessageSource(Plugin):
             # Give other tasks a chance to run
             await asyncio.sleep(0)
 
-def make_plugin(bus: MessageBus, **kwargs: Any) -> Plugin:
+def make_plugin(**kwargs: Any) -> Plugin:
     """
     Factory function required by the entry point.
     Receives the MessageBus from the core.
     """
 
-    return COMMessageSource(bus, **kwargs)
+    return COMMessageSource(**kwargs)

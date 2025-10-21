@@ -14,11 +14,14 @@ class AISDecoderProcessor(Plugin):
     """
     def __init__(
         self,
-        bus: MessageBus,
         *,
+        bus: MessageBus = None,
         in_topic: str = "ais.raw",
         out_topic: str = "ais.decoded",
     ) -> None:
+        if bus is None:
+            raise ValueError("AIS Decoder Processor requires MessageBus")
+
         tbq: TagBlockQueue = TagBlockQueue()
 
         self.bus = bus
@@ -89,10 +92,10 @@ class AISDecoderProcessor(Plugin):
             print(f"[ais_decoder_processor] Decode loop crashed: {e}")
             raise
 
-def make_plugin(bus: MessageBus, **kwargs: Any) -> Plugin:
+def make_plugin(**kwargs: Any) -> Plugin:
     """
     Factory function required by the entry point.
     Receives the MessageBus from the core.
     """
 
-    return AISDecoderProcessor(bus, **kwargs)
+    return AISDecoderProcessor(**kwargs)

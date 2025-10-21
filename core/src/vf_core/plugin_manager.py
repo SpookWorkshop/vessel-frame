@@ -2,7 +2,7 @@ from importlib.metadata import entry_points, EntryPoint
 from collections.abc import Iterable, Callable
 from typing import Any
 from .message_bus import MessageBus
-from .plugin_types import Plugin
+from .plugin_types import Plugin, RendererPlugin
 
 class PluginManager:
     def __init__(self, bus: MessageBus) -> None:
@@ -21,11 +21,11 @@ class PluginManager:
             
         raise KeyError(f"Plugin '{name}' not found in group '{group}'")
 
-    def create(self, group: str, name: str, **kwargs: Any) -> Plugin:
+    def create(self, group: str, name: str, **kwargs: Any) -> Plugin|RendererPlugin:
         factory = self.load_factory(group, name)
-        plugin = factory(self.bus, **kwargs)
+        plugin = factory(**kwargs)
 
-        if not isinstance(plugin, Plugin):
+        if not isinstance(plugin, Plugin) and not isinstance(plugin, RendererPlugin):
             raise TypeError(
                 f"Factory for '{name}' did not return a Plugin instance, got {type(plugin).__name__}"
             )
