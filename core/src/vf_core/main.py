@@ -20,7 +20,7 @@ async def run(argv: list[str] | None = None) -> int:
 
     config_manager = ConfigManager(config_path)
     bus = MessageBus()
-    pm = PluginManager(bus)
+    pm = PluginManager()
     vessel_repo = VesselRepository("db.sqlite")
     vm = VesselManager(bus, vessel_repo, in_topic="ais.decoded")
 
