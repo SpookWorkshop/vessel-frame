@@ -11,6 +11,7 @@ from .plugin_manager import PluginManager
 from .config_manager import ConfigManager
 from .vessel_manager import VesselManager
 from .vessel_repository import VesselRepository
+from .screen_manager import ScreenManager
 
 async def run(argv: list[str] | None = None) -> int:
     logger:logging.Logger = logging.getLogger(__name__)
@@ -69,6 +70,20 @@ async def run(argv: list[str] | None = None) -> int:
 
     if not sources:
         print("No sources started. Exiting.")
+        return 1
+    
+    # Set up the renderer
+    configured_renderer = config_manager.get("ais-messages.renderer", None)
+    print(f"Configured Renderer: {configured_renderer}")
+    renderer_config = config_manager.get(configured_renderer)
+    kwargs = renderer_config if isinstance(renderer_config, dict) else {}
+    renderer:RendererPlugin = pm.create("vesselframe.plugins.renderer", configured_renderer, **kwargs)
+
+    sm = ScreenManager(bus, pm, renderer)
+    await sm.start({})
+
+    if not renderer:
+        print("No renderer created. Exiting.")
         return 1
 
     # Setup graceful shutdown
