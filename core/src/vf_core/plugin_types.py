@@ -7,7 +7,7 @@ class Plugin(Protocol):
 
 @runtime_checkable
 class RendererPlugin(Protocol):
-    def render(self) -> None: ...
+    def flush(self) -> None: ...
 
 @runtime_checkable
 class ScreenPlugin(Protocol):
