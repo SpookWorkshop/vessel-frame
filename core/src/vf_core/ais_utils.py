@@ -80,7 +80,7 @@ def get_vessel_subtype_name(type_code: int | None) -> str | None:
     return sub_cat_type
 
 def get_vessel_full_type_name(type_code: int | None) -> str:
-     """
+    """
     Get vessel main and subtype from AIS type code.
     
     Args:
