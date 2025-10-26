@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "table-screen"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = ["pillow>=12.0.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.entry-points."vesselframe.plugins.screens"]
+table_screen = "table_screen:make_plugin"
