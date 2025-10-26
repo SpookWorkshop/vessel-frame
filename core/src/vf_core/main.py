@@ -79,7 +79,7 @@ async def run(argv: list[str] | None = None) -> int:
     kwargs = renderer_config if isinstance(renderer_config, dict) else {}
     renderer:RendererPlugin = pm.create("vesselframe.plugins.renderer", configured_renderer, **kwargs)
 
-    sm = ScreenManager(bus, pm, renderer)
+    sm = ScreenManager(bus, pm, renderer, vm)
     await sm.start({})
 
     if not renderer:
