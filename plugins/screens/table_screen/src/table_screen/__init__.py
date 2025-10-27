@@ -10,6 +10,7 @@ from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import ScreenPlugin, RendererPlugin
 from vf_core.vessel_manager import VesselManager
 from vf_core.ais_utils import get_vessel_full_type_name
+from vf_core.render_strategies import PeriodicRenderStrategy
 
 class TableScreen(ScreenPlugin):
     """
@@ -33,7 +34,8 @@ class TableScreen(ScreenPlugin):
         bus: MessageBus,
         renderer: RendererPlugin,
         vm: VesselManager,
-        in_topic: str = "vessel.updated"
+        in_topic: str = "vessel.updated",
+        update_interval: float = 30.0
     ) -> None:
         self._bus = bus
         self._renderer = renderer
@@ -41,15 +43,19 @@ class TableScreen(ScreenPlugin):
         self._in_topic = in_topic
         self._task: asyncio.Task[None] | None = None
         self._palette = renderer.palette
+        self._render_strategy = PeriodicRenderStrategy(self._render, max(update_interval, renderer.MIN_RENDER_INTERVAL))
 
     async def activate(self) -> None:
         if self._task and not self._task.done():
             return
         
+        await self._render_strategy.start()
         self._task = asyncio.create_task(self._update_loop())
 
     async def deactivate(self) -> None:
         if self._task and not self._task.done():
+            await self._render_strategy.stop()
+
             self._task.cancel()
             with suppress(asyncio.CancelledError):
                 await self._task
@@ -57,7 +63,7 @@ class TableScreen(ScreenPlugin):
     async def _update_loop(self) -> None:
         try:
             async for msg in self._bus.subscribe(self._in_topic):
-                await self._render()
+                await self._render_strategy.request_render()
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
             # Expected on deactivate
