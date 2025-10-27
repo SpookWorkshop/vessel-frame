@@ -5,6 +5,8 @@ from PIL import Image, ImageFont, ImageDraw
 from pathlib import Path
 
 class ImageRenderer(RendererPlugin):
+    MIN_RENDER_INTERVAL: int = 0
+
     def __init__(
         self,
         *,
@@ -43,7 +45,8 @@ class ImageRenderer(RendererPlugin):
             'background': '#0000FF',
             'foreground': '#FFFFFF',
             'line': '#0000FF',
-            'text': '#0000FF'
+            'text': '#0000FF',
+            'accent': '#000000'
         }
 
     @property
