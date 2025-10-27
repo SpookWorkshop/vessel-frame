@@ -71,7 +71,7 @@ class MockMessageSource(Plugin):
         max_delay: float = 5.0,
     ) -> None:
         if bus is None:
-            raise ValueError("AIS Decoder Processor requires MessageBus")
+            raise ValueError("Mock Message Source requires MessageBus")
         
         self.bus = bus
         self.topic = topic

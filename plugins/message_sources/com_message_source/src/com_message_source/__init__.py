@@ -16,7 +16,7 @@ class COMMessageSource(Plugin):
         port: str = None
     ) -> None:
         if bus is None:
-            raise ValueError("AIS Decoder Processor requires MessageBus")
+            raise ValueError("COM Message Source requires MessageBus")
         
         self.bus = bus
         self.topic = topic
