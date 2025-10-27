@@ -97,8 +97,7 @@ class MockMessageSource(Plugin):
         idx = 0
 
         while True:
-            msg = {"idx": idx, "text": self.messages[idx]}
-            await self.bus.publish(self.topic, msg)
+            await self.bus.publish(self.topic, self.messages[idx])
 
             idx = (idx + 1) % len(self.messages)
             await asyncio.sleep(random.uniform(self.min_delay, self.max_delay))
