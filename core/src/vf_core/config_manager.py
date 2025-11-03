@@ -2,6 +2,8 @@ import tomllib
 import tomli_w
 from pathlib import Path
 from typing import Any
+from collections.abc import Mapping
+import copy
 
 class ConfigManager:
     def __init__(self, path: Path) -> None:
@@ -20,6 +22,9 @@ class ConfigManager:
         with open(self.path, "wb") as f:
             tomli_w.dump(self._cfg, f)
 
+    def get_all(self) -> dict[str, Any]:
+        return copy.deepcopy(self._cfg)
+
     def get(self, key: str, default: Any = None) -> Any:
         keys = key.split(".")
         value = self._cfg
@@ -32,18 +37,18 @@ class ConfigManager:
             else:
                 return default
             
-        return value
+        return copy.deepcopy(value)
 
     def set(self, key: str, value: Any) -> None:
         keys = key.split(".")
-        dict = self._cfg
+        config = self._cfg
 
         for k in keys[:-1]:
-            if k not in dict:
-                dict[k] = {}
-            elif not isinstance(dict[k], dict):
-                raise TypeError(f"Cannot descend into non-dictionary '{k}'")
+            if k not in config:
+                config[k] = {}
+            elif not isinstance(config[k], dict):
+                raise TypeError(f"Cannot descend into non-dictionary '{k}' (found type {type(config[k]).__name__!r})")
             
-            dict = dict[k]
+            config = config[k]
 
-        dict[keys[-1]] = value
+        config[keys[-1]] = value
