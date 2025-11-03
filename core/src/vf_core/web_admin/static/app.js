@@ -8,11 +8,8 @@ class AdminPanel {
     
     async init() {
         this.pluginList = await this.fetchAvailablePlugins();
-        console.log(this.pluginList);
         this.schemas = await this.fetchPluginSchemas();
-        console.log(this.schemas);
         this.currentConfig = await this.fetchConfig();
-        console.log(this.currentConfig);
 
         this.renderPluginList();
         this.showSystemSettings();
@@ -32,10 +29,46 @@ class AdminPanel {
         const response = await fetch('/api/config/');
         return await response.json();
     }
+
+    async enablePlugin(category, plugin) {
+        await fetch('/api/plugins/enable/', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({category: category, name: plugin})
+        });
+
+        this.schemas = await this.fetchPluginSchemas();
+        this.currentConfig = await this.fetchConfig();
+        console.log(this.schemas);
+        console.log(this.currentConfig);
+
+        this.renderPluginList();
+        
+        alert('Plugin Enabled! Restart may be required.');
+    }
+
+    async disablePlugin(category, plugin) {
+        await fetch('/api/plugins/disable/', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({category: category, name: plugin})
+        });
+
+        this.schemas = await this.fetchPluginSchemas();
+        this.currentConfig = await this.fetchConfig();
+        console.log(this.schemas);
+        console.log(this.currentConfig);
+
+        this.renderPluginList();
+        
+        alert('Plugin Disabled! Restart may be required.');
+    }
     
     renderPluginList() {
         const list = document.getElementById('plugin-list');
-        const enabledPlugins = this.currentConfig['ais-messages'];
+        list.innerHTML = '';
+
+        const enabledPlugins = this.currentConfig['plugins'] || [];
 
         for (const [category, plugins] of Object.entries(this.pluginList)) {
             for (const plugin of plugins) {
@@ -46,19 +79,31 @@ class AdminPanel {
                 card.innerHTML = `<div class="flex" style="justify-content: space-between;">
                     <h2>${plugin}</h2>
                     <button>${isEnabled ? 'Disable' : 'Enable'}</button>
-                </div>`;
+                </div>
+                <div class="plugin-config"></div>`;
+
+                const button = card.querySelector('button');
+                button.addEventListener('click', () => {
+                    isEnabled ? this.disablePlugin(category,plugin) : this.enablePlugin(category, plugin);
+                });
+
+                if(isEnabled){
+                    const schema = this.schemas[plugin];
+                    const pluginCtnr = card.querySelector('.plugin-config');
+
+                    this.showPluginConfig(pluginCtnr, schema)
+                }
+
                 list.appendChild(card);
             }
         }
     }
     
-    showPluginConfig(schema) {
-        const panel = document.getElementById('plugin-config');
-        const title = document.getElementById('plugin-title');
-        const form = document.getElementById('plugin-form');
-        
-        title.textContent = schema.plugin_name;
-        form.innerHTML = '';
+    showPluginConfig(container, schema) {
+        container.innerHTML = '';
+
+        const form = document.createElement('form');
+        form.id = 'plugin-form';
         
         for (const field of schema.fields) {
             const fieldDiv = this.createFormField(field, schema.plugin_name);
@@ -73,8 +118,7 @@ class AdminPanel {
         };
         form.appendChild(saveBtn);
         
-        document.getElementById('system-settings').style.display = 'none';
-        panel.style.display = 'block';
+        container.appendChild(form);
     }
     
     createFormField(field, pluginName) {

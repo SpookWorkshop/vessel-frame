@@ -43,7 +43,7 @@ async def run(argv: list[str] | None = None) -> int:
     await vm.start()
 
     # Load and start sources
-    configured_sources = config_manager.get("ais-messages.sources", [])
+    configured_sources = config_manager.get("plugins.sources", [])
     for s in configured_sources:
         try:
             source_config = config_manager.get(s)
@@ -59,7 +59,7 @@ async def run(argv: list[str] | None = None) -> int:
             print(f"Failed to start source '{s}': {e}")
 
     # Load and start processors
-    configured_processors = config_manager.get("ais-messages.processors", [])
+    configured_processors = config_manager.get("plugins.processors", [])
     for p in configured_processors:
         try:
             processor_config = config_manager.get(p)
@@ -75,21 +75,18 @@ async def run(argv: list[str] | None = None) -> int:
 
     if not sources:
         print("No sources started. Exiting.")
-        return 1
     
     # Set up the renderer
-    configured_renderer = config_manager.get("ais-messages.renderer", None)
-    print(f"Configured Renderer: {configured_renderer}")
-    renderer_config = config_manager.get(configured_renderer)
-    kwargs = renderer_config if isinstance(renderer_config, dict) else {}
-    renderer:RendererPlugin = pm.create("vesselframe.plugins.renderer", configured_renderer, **kwargs)
+    configured_renderer = config_manager.get("plugins.renderer", None)
+    if configured_renderer is not None:
+        renderer_config = config_manager.get(configured_renderer)
+        kwargs = renderer_config if isinstance(renderer_config, dict) else {}
+        renderer:RendererPlugin = pm.create("vesselframe.plugins.renderer", configured_renderer, **kwargs)
 
-    sm = ScreenManager(bus, pm, renderer, vm)
-    await sm.start({})
-
-    if not renderer:
+        sm = ScreenManager(bus, pm, renderer, vm)
+        await sm.start({})
+    else:
         print("No renderer created. Exiting.")
-        return 1
     
     # Setup graceful shutdown
     stop_event = asyncio.Event()
