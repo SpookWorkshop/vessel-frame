@@ -13,3 +13,6 @@ where = ["src"]
 
 [project.entry-points."vesselframe.plugins.messagesource"]
 com_message_source = "com_message_source:make_plugin"
+
+[project.entry-points."vesselframe.config.schemas"]
+com_message_source = "com_message_source:get_config_schema"

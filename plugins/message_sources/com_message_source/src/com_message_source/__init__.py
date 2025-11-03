@@ -4,7 +4,7 @@ import serial
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin
+from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType
 
 class COMMessageSource(Plugin):
     def __init__(
@@ -57,6 +57,29 @@ class COMMessageSource(Plugin):
             
             # Give other tasks a chance to run
             await asyncio.sleep(0)
+
+def get_config_schema() -> ConfigSchema:
+    return ConfigSchema(
+        plugin_name="com_message_source",
+        plugin_type="source",
+        fields=[
+            ConfigField(
+                key="port",
+                label="COM Port",
+                field_type=ConfigFieldType.STRING,
+                default="COM3",
+                required=True,
+                description="Serial port name"
+            ),
+            ConfigField(
+                key="baud_rate",
+                label="Baud Rate",
+                field_type=ConfigFieldType.SELECT,
+                default=38400,
+                options=[9600, 19200, 38400, 57600, 115200]
+            )
+        ]
+    )
 
 def make_plugin(**kwargs: Any) -> Plugin:
     """
