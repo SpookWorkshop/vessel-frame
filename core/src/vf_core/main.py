@@ -12,6 +12,7 @@ from .config_manager import ConfigManager
 from .vessel_manager import VesselManager
 from .vessel_repository import VesselRepository
 from .screen_manager import ScreenManager
+from .web_admin.main import app, start_admin_server
 
 async def run(argv: list[str] | None = None) -> int:
     logger:logging.Logger = logging.getLogger(__name__)
@@ -30,6 +31,10 @@ async def run(argv: list[str] | None = None) -> int:
     except Exception as e:
         logger.exception(f"Failed to load config from {config_path}", exc_info=e)
         return 1
+
+    config_task = asyncio.create_task(
+        start_admin_server(config_manager, pm)
+    )
 
     # Track all plugins for cleanup
     sources: list[Plugin] = []
@@ -85,7 +90,7 @@ async def run(argv: list[str] | None = None) -> int:
     if not renderer:
         print("No renderer created. Exiting.")
         return 1
-
+    
     # Setup graceful shutdown
     stop_event = asyncio.Event()
     
