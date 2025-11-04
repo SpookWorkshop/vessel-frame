@@ -1,4 +1,4 @@
-VESSEL_TYPES = {
+VESSEL_TYPES: dict[int,str] = {
     -1: "Unknown",
     0: "Unknown",
     20: "Wing in Ground",
@@ -27,7 +27,7 @@ VESSEL_TYPES = {
     90: "Other"
 }
 
-VESSEL_SUBCATS = {
+VESSEL_SUBCATS: dict[int,str] = {
     1: "Hazardous (High)",
     2: "Hazardous",
     3: "Hazardous (Low)",
@@ -73,11 +73,14 @@ def get_vessel_subtype_name(type_code: int | None) -> str | None:
     """
     if type_code is None:
         return None
-
+    
+    # If there's an exact match in VESSEL_TYPES, no subtype applies
+    if type_code in VESSEL_TYPES:
+        return None
+    
+    # Subtype only applies when using base category fallback
     sub_cat = type_code % 10
-    sub_cat_type = VESSEL_SUBCATS.get(sub_cat)
-
-    return sub_cat_type
+    return VESSEL_SUBCATS.get(sub_cat)
 
 def get_vessel_full_type_name(type_code: int | None) -> str:
     """
