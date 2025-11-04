@@ -9,9 +9,15 @@ class ConfigManager:
     def __init__(self, path: Path) -> None:
         self.path = path
         self._cfg: dict[str, Any] = {}
-        self.load()
 
     def load(self) -> None:
+        """
+        Load the config file specified in the constructor.
+        If the file does not exist, the load will fail silently and an empty
+         config will be used
+        """
+        self._cfg = {}
+        
         if self.path.exists():
             with open(self.path, "rb") as f:
                 self._cfg = tomllib.load(f)
