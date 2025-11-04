@@ -12,7 +12,7 @@ class COMMessageSource(Plugin):
         *,
         bus: MessageBus,
         topic: str = "ais.raw",
-        baud: int = 38400,
+        baud_rate: int = 38400,
         port: str = None
     ) -> None:
         if bus is None:
@@ -20,7 +20,7 @@ class COMMessageSource(Plugin):
         
         self.bus = bus
         self.topic = topic
-        self.baud = baud
+        self.baud_rate = baud_rate
         self.port = port
         self.serial = None
         self._task: asyncio.Task[None] | None = None
@@ -44,7 +44,7 @@ class COMMessageSource(Plugin):
     async def _loop(self) -> None:
         self.serial = serial.Serial(
             port=self.port,
-            baudrate=self.baud,
+            baudrate=self.baud_rate,
             timeout=1
         )
 
