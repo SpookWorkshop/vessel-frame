@@ -2,7 +2,6 @@ import tomllib
 import tomli_w
 from pathlib import Path
 from typing import Any
-from collections.abc import Mapping
 import copy
 
 class ConfigManager:
@@ -53,8 +52,8 @@ class ConfigManager:
             if k not in config:
                 config[k] = {}
             elif not isinstance(config[k], dict):
-                raise TypeError(f"Cannot descend into non-dictionary '{k}' (found type {type(config[k]).__name__!r})")
+                raise TypeError(f"Cannot descend into non-dictionary '{k}' (found type {type(config[k]).__name__})")
             
             config = config[k]
 
-        config[keys[-1]] = value
+        config[keys[-1]] = copy.deepcopy(value)
