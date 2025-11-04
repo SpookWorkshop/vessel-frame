@@ -77,8 +77,9 @@ async def run(argv: list[str] | None = None) -> int:
         print("No sources started. Exiting.")
     
     # Set up the renderer
-    configured_renderer = config_manager.get("plugins.renderer", None)
-    if configured_renderer is not None:
+    configured_renderers = config_manager.get("plugins.renderer", None)
+    if configured_renderers is not None:
+        configured_renderer = configured_renderers[0]
         renderer_config = config_manager.get(configured_renderer)
         kwargs = renderer_config if isinstance(renderer_config, dict) else {}
         renderer:RendererPlugin = pm.create("vesselframe.plugins.renderer", configured_renderer, **kwargs)
