@@ -11,7 +11,7 @@ class ScreenManager:
         self._renderer = renderer
         self._vm = vm
 
-    async def start(self, screen_configs):
+    async def start(self):
         for s in self._pm.iter_entry_points("vesselframe.plugins.screens"):
             screen:ScreenPlugin = self._pm.create("vesselframe.plugins.screens", s.name, bus=self._bus, renderer=self._renderer, vm=self._vm)
             self._screens.append(screen)
