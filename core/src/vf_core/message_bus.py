@@ -10,7 +10,7 @@ class MessageBus:
     """
 
     def __init__(self) -> None:
-        self._subs: dict[str, list[asyncio.Queue[Any]]] = defaultdict(list)
+        self._subs: defaultdict[str, list[asyncio.Queue[Any]]] = defaultdict(list)
         self._lock = asyncio.Lock()
 
     async def publish(self, topic: str, message: Any) -> None:
@@ -47,4 +47,18 @@ class MessageBus:
                 yield msg
         finally:
             async with self._lock:
-                self._subs[topic].remove(q)
+                try:
+                    self._subs[topic].remove(q)
+                except (KeyError, ValueError):
+                    # Safe even if topic was already cleared
+                    pass
+
+    async def shutdown(self) -> None:
+        """
+        Shutdown the message bus and clean up all subscriptions.
+        
+        Clears all subscriber queues. Subsequent unsubscribe operations
+        from individual subscribers will be safely ignored.
+        """
+        async with self._lock:
+            self._subs.clear()

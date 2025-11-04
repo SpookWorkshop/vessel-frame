@@ -205,6 +205,8 @@ async def run(argv: list[str] | None = None) -> int:
             except Exception as e:
                 logger.exception("Error stopping processor")
 
+        await bus.shutdown()
+
         logger.info("Shutdown complete.")
     return 0
 
