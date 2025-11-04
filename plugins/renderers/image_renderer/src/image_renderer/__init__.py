@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any
-from vf_core.plugin_types import RendererPlugin
+from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, RendererPlugin
 from PIL import Image, ImageFont, ImageDraw
 from pathlib import Path
 
@@ -12,7 +12,8 @@ class ImageRenderer(RendererPlugin):
         *,
         out_path: str = "data/image.png",
         width: int = 480,
-        height: int = 800
+        height: int = 800,
+        orientation: str = "portrait"
     ) -> None:
         plugin_dir = Path(__file__).parent
         font_path = plugin_dir / 'fonts' / 'Inter' / 'Inter-VariableFont_opsz,wght.ttf'
@@ -24,11 +25,18 @@ class ImageRenderer(RendererPlugin):
             'large': ImageFont.truetype(font_path, 35),
         }
 
-        self._canvas: Image.Image = Image.new("RGB", (width,height))
         self._out_path = out_path
-        self._width = width
-        self._height = height
+        self._orientation = orientation
 
+        # Swap width and height if they weren't passed in a way that expresses the orientation
+        if (orientation == "portrait" and width > height) or (orientation == "landscape" and height > width):
+            self._width = int(height)
+            self._height = int(width)
+        else:
+            self._width = int(width)
+            self._height = int(height)
+
+        self._canvas: Image.Image = Image.new("RGB", (self._width, self._height))
         path = Path(out_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -56,6 +64,40 @@ class ImageRenderer(RendererPlugin):
     @property
     def fonts(self) -> list[ImageFont]:
         return self._fonts
+    
+def get_config_schema() -> ConfigSchema:
+    return ConfigSchema(
+        plugin_name="image_renderer",
+        plugin_type="renderer",
+        fields=[
+            ConfigField(
+                key="out_path",
+                label="File Path",
+                field_type=ConfigFieldType.STRING,
+                default="data/image.png",
+                description="File output path"
+            ),
+            ConfigField(
+                key="width",
+                label="Width",
+                field_type=ConfigFieldType.INTEGER,
+                default=480,
+            ),
+            ConfigField(
+                key="height",
+                label="Height",
+                field_type=ConfigFieldType.INTEGER,
+                default=800,
+            ),
+            ConfigField(
+                key="orientation",
+                label="Orientation",
+                field_type=ConfigFieldType.SELECT,
+                default="portrait",
+                options=["portrait","landscape"]
+            )
+        ]
+    )
 
 def make_plugin(**kwargs: Any) -> RendererPlugin:
     """

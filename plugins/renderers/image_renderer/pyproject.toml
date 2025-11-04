@@ -16,3 +16,6 @@ where = ["src"]
 
 [project.entry-points."vesselframe.plugins.renderer"]
 image_renderer = "image_renderer:make_plugin"
+
+[project.entry-points."vesselframe.config.schemas"]
+image_renderer = "image_renderer:get_config_schema"
