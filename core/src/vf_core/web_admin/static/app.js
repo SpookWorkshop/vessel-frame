@@ -91,7 +91,9 @@ class AdminPanel {
                     const schema = this.schemas[plugin];
                     const pluginCtnr = card.querySelector('.plugin-config');
 
-                    this.showPluginConfig(pluginCtnr, schema)
+                    if(schema && pluginCtnr){
+                        this.showPluginConfig(pluginCtnr, schema);
+                    }
                 }
 
                 list.appendChild(card);
@@ -117,7 +119,7 @@ class AdminPanel {
             this.savePluginConfig(schema.plugin_name, form);
         };
         form.appendChild(saveBtn);
-        
+
         container.appendChild(form);
     }
     
