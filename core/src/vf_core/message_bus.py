@@ -14,14 +14,30 @@ class MessageBus:
         self._lock = asyncio.Lock()
 
     async def publish(self, topic: str, message: Any) -> None:
+        """
+        Publish a message to all current subscribers of a topic.
+        
+        If a subscriber's queue is full, the oldest message is dropped to make room.
+        This ensures subscribers always receive the most recent data.
+        """
         async with self._lock:
             queues = list(self._subs.get(topic, []))
 
         for q in queues:
-            q.put_nowait(message)
+            if q.full():
+                # Drop oldest message to make room
+                try:
+                    q.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+            
+            try:
+                q.put_nowait(message)
+            except asyncio.QueueFull:
+                pass
 
     async def subscribe(self, topic: str) -> AsyncIterator[Any]:
-        q: asyncio.Queue[Any] = asyncio.Queue()
+        q: asyncio.Queue[Any] = asyncio.Queue(maxsize=1000)
         async with self._lock:
             self._subs[topic].append(q)
 
