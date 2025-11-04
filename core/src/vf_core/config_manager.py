@@ -13,13 +13,18 @@ class ConfigManager:
         """
         Load the config file specified in the constructor.
         If the file does not exist, the load will fail silently and an empty
-         config will be used
+         config will be used.
+        If the config file exists but is malformed then a ValueError will
+         be thrown
         """
         self._cfg = {}
         
         if self.path.exists():
-            with open(self.path, "rb") as f:
-                self._cfg = tomllib.load(f)
+            try:
+                with open(self.path, "rb") as f:
+                    self._cfg = tomllib.load(f)
+            except tomllib.TOMLDecodeError as e:
+                raise ValueError(f"Invalid TOML in config file {self.path}: {e}") from e
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
