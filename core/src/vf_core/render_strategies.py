@@ -81,14 +81,24 @@ class QueuedRenderStrategy:
         self._render_func = render_func
         self._min_interval = min_interval
         
-        self._event_queue: asyncio.Queue = asyncio.Queue()
+        self._event_queue: asyncio.Queue = asyncio.Queue(maxsize=20)
         
         self._task: asyncio.Task | None = None
         self._last_render_time = 0.0
     
     async def request_render(self, data: Any = None) -> None:
         """Request a render (with optional event data)"""
-        await self._event_queue.put(data)
+        if self._event_queue.full():
+            # Drop oldest
+            try:
+                self._event_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+            
+        try:
+            await self._event_queue.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
     
     async def start(self) -> None:
         """Start processing renders"""
