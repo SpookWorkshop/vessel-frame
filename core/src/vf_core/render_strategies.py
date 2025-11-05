@@ -1,6 +1,7 @@
 import asyncio
 import time
 from typing import Callable, Awaitable, Any
+from contextlib import suppress
 
 class PeriodicRenderStrategy:
     """
@@ -16,14 +17,12 @@ class PeriodicRenderStrategy:
         self._render_func = render_func
         self._min_interval = min_interval
         
-        self._dirty = False
         self._dirty_event = asyncio.Event()
         
         self._task: asyncio.Task | None = None
         self._last_render_time = 0.0
     
     async def request_render(self) -> None:
-        self._dirty = True
         self._dirty_event.set()
     
     async def start(self) -> None:
@@ -44,15 +43,16 @@ class PeriodicRenderStrategy:
         while True:
             # Wait for dirty flag
             await self._dirty_event.wait()
-            self._dirty_event.clear()
             
-            # Wait for blocking period to pass
+            # Enforce minimum interval before rendering
             await self._wait_for_interval()
             
-            # Render
-            if self._dirty:
-                await self._initiate_render()
-                self._dirty = False
+            # We're about to render so any more events from this point
+            # should trigger another render pass later
+            self._dirty_event.clear()
+
+            # Perform the render
+            await self._initiate_render()
     
     async def _wait_for_interval(self) -> None:
         current_time = time.time()
