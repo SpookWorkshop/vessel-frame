@@ -10,7 +10,7 @@ class PeriodicRenderStrategy:
 
     def __init__(
         self,
-        render_func: Callable[[Any | None], Awaitable[None]],
+        render_func: Callable[[], Awaitable[None]],
         min_interval: float,
     ):
         self._render_func = render_func
@@ -26,12 +26,9 @@ class PeriodicRenderStrategy:
         self._dirty = True
         self._dirty_event.set()
     
-    async def start(self, initial_render: bool = True) -> None:
+    async def start(self) -> None:
         if self._task and not self._task.done():
             return
-        
-        if initial_render:
-            await self._initiate_render()
         
         self._task = asyncio.create_task(
             self._state_loop()
@@ -93,13 +90,10 @@ class QueuedRenderStrategy:
         """Request a render (with optional event data)"""
         await self._event_queue.put(data)
     
-    async def start(self, initial_render: bool = True) -> None:
+    async def start(self) -> None:
         """Start processing renders"""
         if self._task and not self._task.done():
             return
-        
-        if initial_render:
-            await self._initiate_render(None)
         
         self._task = asyncio.create_task(
             self._event_loop()
