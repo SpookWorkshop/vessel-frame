@@ -8,6 +8,15 @@ from typing import Any
 from .vessel_repository import VesselRepository
 
 class VesselManager:
+    # Event topics published by VesselManager
+    EVENT_APPEARED = "vessel.appeared"
+    EVENT_FIRST_SEEN = "vessel.first_seen"
+    EVENT_IDENTIFIED = "vessel.identified"
+    EVENT_ZONE_ENTERED = "vessel.zone_entered"
+    EVENT_ZONE_EXITED = "vessel.zone_exited"
+    EVENT_ZONE_MOVED = "vessel.zone_moved"
+    EVENT_UPDATED = "vessel.updated"
+
     def __init__(
         self,
         bus: MessageBus,
@@ -49,14 +58,14 @@ class VesselManager:
                 try:
                     await self._update_vessel(msg)
                 except Exception as e:
-                    self._logger.exception("Exception in update_vessel", exc_info=e)
+                    self._logger.exception("Exception in update_vessel")
 
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
             self._logger.info("Receive loop cancelled")
             raise
         except Exception as e:
-            self._logger.exception("Receive loop crashed", exc_info=e)
+            self._logger.exception("Receive loop crashed")
             raise
 
     def _is_message_valid(self, message: dict[str, Any]) -> bool:
@@ -111,7 +120,7 @@ class VesselManager:
                 ship_prev = db_vessel
                 
                 # Publish first_seen event (first seen in this session, not ever)
-                await self._bus.publish("vessel.appeared", {
+                await self._bus.publish(self.EVENT_APPEARED, {
                     "mmsi": mmsi,
                     "vessel": db_vessel,
                     "known": db_vessel.get('has_static_data', False)
@@ -119,7 +128,7 @@ class VesselManager:
             else:
                 # Brand new vessel
                 self._logger.info(f"New vessel detected: {mmsi}")
-                await self._bus.publish("vessel.first_seen", {
+                await self._bus.publish(self.EVENT_FIRST_SEEN, {
                     "mmsi": mmsi,
                     "has_static_data": has_static_data
                 })
@@ -138,7 +147,7 @@ class VesselManager:
                 f"Vessel identified: {ship.get('name')} ({mmsi}), "
                 f"Type: {ship.get('type', 'Unknown')}"
             )
-            await self._bus.publish("vessel.identified", {
+            await self._bus.publish(self.EVENT_IDENTIFIED, {
                 "mmsi": mmsi,
                 "vessel": ship
             })
@@ -183,7 +192,7 @@ class VesselManager:
         if zone_current != zone_prev:
             if zone_prev is None and zone_current is not None:
                 # Entered a zone
-                await self._bus.publish("vessel.zone_entered", {
+                await self._bus.publish(self.EVENT_ZONE_ENTERED, {
                     "mmsi": mmsi,
                     "zone": zone_current,
                     "vessel": ship
@@ -192,7 +201,7 @@ class VesselManager:
                 self._logger.info(f"Vessel {ship.get('name', 'Unknown')} entered zone: {zone_current}")
             elif zone_prev is not None and zone_current is None:
                 # Exited a zone
-                await self._bus.publish("vessel.zone_exited", {
+                await self._bus.publish(self.EVENT_ZONE_EXITED, {
                     "mmsi": mmsi,
                     "zone": zone_prev,
                     "vessel": ship
@@ -201,7 +210,7 @@ class VesselManager:
                 self._logger.info(f"Vessel {ship.get('name', 'Unknown')} exited zone: {zone_prev}")
             elif zone_prev is not None and zone_current is not None:
                 # Moved between zones
-                await self._bus.publish("vessel.zone_moved", {
+                await self._bus.publish(self.EVENT_ZONE_MOVED, {
                     "mmsi": mmsi,
                     "from_zone": zone_prev,
                     "to_zone": zone_current,
