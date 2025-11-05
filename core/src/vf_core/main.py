@@ -131,6 +131,7 @@ async def run(argv: list[str] | None = None) -> int:
     sources: list[Plugin] = []
     processors: list[Plugin] = []
 
+    await vessel_repo.start()
     await vm.start()
 
     sources = await _init_plugins(
@@ -173,6 +174,7 @@ async def run(argv: list[str] | None = None) -> int:
         logger.info("Received shutdown signal")
     finally:
         logger.info("Shutting down...")
+        await vessel_repo.stop()
         await vm.stop()
 
         # Stop the admin server

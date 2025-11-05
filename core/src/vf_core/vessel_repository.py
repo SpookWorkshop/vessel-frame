@@ -8,12 +8,16 @@ class VesselRepository:
         self._db_path = db_path
         self._db_conn = None
 
-    async def connect(self) -> None:
+    async def start(self) -> None:
         self._db_conn = await aiosqlite.connect(self._db_path)
         self._db_conn.row_factory = aiosqlite.Row
         await self._initialise_schema()
 
     async def _initialise_schema(self) -> None:
+        if not self._db_conn:
+            self._logger.error("Database not connected")
+            return None
+    
         await self._db_conn.execute("""
             CREATE TABLE IF NOT EXISTS vessels (
                 mmsi TEXT PRIMARY KEY,
@@ -42,6 +46,10 @@ class VesselRepository:
     async def upsert_vessel(
         self, vessel_data: dict[str, Any], allow_static_update: bool
     ) -> dict[str, Any] | None:
+        if not self._db_conn:
+            self._logger.error("Database not connected")
+            return None
+    
         query = """
             INSERT INTO vessels (
                 mmsi, imo, name, callsign, type, bow, stern, port, starboard,
@@ -84,11 +92,15 @@ class VesselRepository:
 
             return result
         except aiosqlite.Error as e:
-            self._logger.exception("SQLite error", exc_info=e)
+            self._logger.exception("SQLite error")
             await self._db_conn.rollback()
             return None
 
     async def get_vessel(self, mmsi: str) -> dict[str, Any] | None:
+        if not self._db_conn:
+            self._logger.error("Database not connected")
+            return None
+    
         try:
             cursor = await self._db_conn.execute(
                 "SELECT * FROM vessels WHERE mmsi = ?", (mmsi,)
@@ -98,10 +110,10 @@ class VesselRepository:
                 return dict(result)
             return None
         except aiosqlite.Error as e:
-            self._logger.exception("Error fetching vessel", exc_info=e)
+            self._logger.exception("Error fetching vessel")
             return None
 
-    async def get_vessel_stats(self) -> dict[str, Any]:
+    async def get_vessel_stats(self) -> dict[str, Any] | None:
         try:
             cursor = await self._db_conn.execute("""
                 SELECT 
@@ -122,9 +134,9 @@ class VesselRepository:
                 return stats
             return {'total': 0, 'identified': 0, 'unknown': 0, 'percent_identified': 0.0}
         except aiosqlite.Error as e:
-            self._logger.exception("Error fetching stats", exc_info=e)
+            self._logger.exception("Error fetching stats")
             return None
 
-    async def close(self) -> None:
+    async def stop(self) -> None:
         if self._db_conn:
             await self._db_conn.close()

@@ -35,8 +35,6 @@ class VesselManager:
         self._zones: list[dict[str, Any]] = []
 
     async def start(self) -> None:
-        await self._vessel_repo.connect()
-
         if self._task and not self._task.done():
             return
 
@@ -48,9 +46,6 @@ class VesselManager:
 
             with suppress(asyncio.CancelledError):
                 await self._task
-
-        if self._vessel_repo:
-            await self._vessel_repo.close()
 
     async def _loop(self) -> None:
         try:
@@ -73,7 +68,7 @@ class VesselManager:
 
         # Ship MMSI should be 9 or more digits. Under 9 means it's
         # probably a base station, navigation aid etc
-        if len(mmsi) < 9:
+        if len(mmsi) != 9:
             self._logger.debug(f"MMSI {mmsi} is not a ship. Skip update.")
             return False
 
@@ -102,7 +97,7 @@ class VesselManager:
             "imo": message.get("imo", "0"),
             "name": message.get("shipname", "Unknown"),
             "callsign": message.get("callsign", "????"),
-            "ship_type": message.get("ship_type", "-1"),
+            "ship_type": message.get("ship_type", -1),
             "bow": message.get("to_bow", 0),
             "stern": message.get("to_stern", 0),
             "port": message.get("to_port", 0),
@@ -167,7 +162,10 @@ class VesselManager:
         if lat is not None and lon is not None:
             ship["zone"] = self._check_zones(lat, lon)
 
-        # Update in-memory state
+        # Update in-memory state. We merge these in a specific order:
+        # - ship_prev: The ship data we already have
+        # - ship: Augment with static values from database
+        # - dynamic_data: Any transient data from the current message
         self._vessels[mmsi] = {
             **ship_prev,
             **ship,
@@ -220,8 +218,8 @@ class VesselManager:
                 self._logger.info(f"Vessel {ship.get('name', 'Unknown')} moved: {zone_prev} -> {zone_current}")
 
         # Always publish vessel update
-        self._logger.debug("Updated: {ship.get('name', 'Unknown')} ({mmsi}), Zone: {zone_current or 'None'}")
-        await self._bus.publish("vessel.updated", ship)
+        self._logger.debug(f"Updated: {ship.get('name', 'Unknown')} ({mmsi}), Zone: {zone_current or 'None'}")
+        await self._bus.publish(self.EVENT_UPDATED, ship)
 
     def _calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
