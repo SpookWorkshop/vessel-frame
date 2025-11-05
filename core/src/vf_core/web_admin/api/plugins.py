@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 from vf_core.plugin_manager import PluginManager
 from vf_core.config_manager import ConfigManager
-from vf_core.plugin_types import Configurable
 
 router = APIRouter()
 
