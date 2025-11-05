@@ -2,6 +2,7 @@ import asyncio
 import time
 from typing import Callable, Awaitable, Any
 from contextlib import suppress
+import logging
 
 class PeriodicRenderStrategy:
     """
@@ -14,6 +15,8 @@ class PeriodicRenderStrategy:
         render_func: Callable[[], Awaitable[None]],
         min_interval: float,
     ):
+        self._logger = logging.getLogger(__name__)
+
         self._render_func = render_func
         self._min_interval = min_interval
         
@@ -41,21 +44,26 @@ class PeriodicRenderStrategy:
     
     async def _state_loop(self) -> None:
         while True:
-            # Wait for dirty flag
-            await self._dirty_event.wait()
-            
-            # Enforce minimum interval before rendering
-            await self._wait_for_interval()
-            
-            # We're about to render so any more events from this point
-            # should trigger another render pass later
-            self._dirty_event.clear()
+            try:
+                # Wait for dirty flag
+                await self._dirty_event.wait()
+                
+                # Enforce minimum interval before rendering
+                await self._wait_for_interval()
+                
+                # We're about to render so any more events from this point
+                # should trigger another render pass later
+                self._dirty_event.clear()
 
-            # Perform the render
-            await self._initiate_render()
+                # Perform the render
+                await self._initiate_render()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._logger.exception("Render failed")
     
     async def _wait_for_interval(self) -> None:
-        current_time = time.time()
+        current_time = time.monotonic()
         time_since_last = current_time - self._last_render_time
         
         if time_since_last < self._min_interval:
@@ -64,7 +72,7 @@ class PeriodicRenderStrategy:
     
     async def _initiate_render(self) -> None:
         await self._render_func()
-        self._last_render_time = time.time()
+        self._last_render_time = time.monotonic()
 
 class QueuedRenderStrategy:
     """
@@ -78,6 +86,7 @@ class QueuedRenderStrategy:
         render_func: Callable[[Any | None], Awaitable[None]],
         min_interval: float,
     ):
+        self._logger = logging.getLogger(__name__)
         self._render_func = render_func
         self._min_interval = min_interval
         
@@ -119,18 +128,23 @@ class QueuedRenderStrategy:
     async def _event_loop(self) -> None:
         """Process queued events sequentially"""
         while True:
-            # Get next event
-            data = await self._event_queue.get()
-            
-            # Wait for blocking period if needed
-            await self._wait_for_interval()
-            
-            # Render
-            await self._initiate_render(data)
+            try:
+                # Get next event
+                data = await self._event_queue.get()
+                
+                # Wait for blocking period if needed
+                await self._wait_for_interval()
+                
+                # Render
+                await self._initiate_render(data)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._logger.exception("Render failed")
     
     async def _wait_for_interval(self) -> None:
         """Wait for minimum interval since last render"""
-        current_time = time.time()
+        current_time = time.monotonic()
         time_since_last = current_time - self._last_render_time
         
         if time_since_last < self._min_interval:
@@ -140,4 +154,4 @@ class QueuedRenderStrategy:
     async def _initiate_render(self, data: Any = None) -> None:
         """Perform the actual render"""
         await self._render_func(data)
-        self._last_render_time = time.time()
+        self._last_render_time = time.monotonic()
