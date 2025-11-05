@@ -13,6 +13,20 @@ class PluginManager:
             self._entry_points_cache[group] = list(entry_points().select(group=group))
 
         return iter(self._entry_points_cache[group])
+    
+    def empty_cache(self, group: str | None = None) -> None:
+        """
+        Empty the entry points cache.
+        
+        Args:
+            group: Specific group to refresh, or None to clear entire cache
+        """
+        if group is None:
+            self._entry_points_cache.clear()
+            self._logger.debug("Cleared entire entry points cache")
+        else:
+            self._entry_points_cache.pop(group, None)
+            self._logger.debug(f"Cleared entry points cache for group '{group}'")
 
     def names(self, group: str) -> list[str]:
         return [ep.name for ep in self.iter_entry_points(group)]
