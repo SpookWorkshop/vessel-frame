@@ -5,6 +5,13 @@ from dataclasses import dataclass
 if TYPE_CHECKING:
     from PIL import Image, ImageFont
 
+# Plugin discovery via setuptools entry points
+# Plugins register themselves in pyproject.toml under these groups
+GROUP_SOURCES = "vesselframe.plugins.messagesource"
+GROUP_PROCESSORS = "vesselframe.plugins.messageprocessors"
+GROUP_RENDERER = "vesselframe.plugins.renderer"
+GROUP_SCREENS = "vesselframe.plugins.screens"
+
 @runtime_checkable
 class Plugin(Protocol):
     async def start(self) -> None: ...

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 from logging.handlers import RotatingFileHandler
-from .plugin_types import Plugin, RendererPlugin
+from .plugin_types import GROUP_PROCESSORS, GROUP_RENDERER, GROUP_SOURCES, Plugin, RendererPlugin
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
 from .config_manager import ConfigManager
@@ -25,13 +25,6 @@ Starts core services, loads plugins, and runs the web admin.
 Usage:
     vf --config config.toml --db db.sqlite --log-level INFO
 """
-
-# Plugin discovery via setuptools entry points
-# Plugins register themselves in pyproject.toml under these groups
-GROUP_SOURCES = "vesselframe.plugins.messagesource"
-GROUP_PROCESSORS = "vesselframe.plugins.messageprocessors"
-GROUP_RENDERER = "vesselframe.plugins.renderer"
-
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="vessel-frame")
@@ -205,6 +198,7 @@ async def run(argv: list[str] | None = None) -> int:
             except Exception as e:
                 logger.exception("Error stopping processor")
 
+        await sm.stop()
         await bus.shutdown()
 
         logger.info("Shutdown complete.")
