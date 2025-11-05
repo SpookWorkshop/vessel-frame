@@ -18,5 +18,7 @@ class ScreenManager:
         
         if self._screens:
             self._active_screen = self._screens[0]
+            await self._active_screen.activate()
+        else:
+            self._logger.warning("No screens loaded")
 
-        await self._active_screen.activate()
