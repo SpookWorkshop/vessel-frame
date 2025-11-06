@@ -6,24 +6,9 @@ from vf_core.plugin_manager import PluginManager
 from vf_core.config_manager import ConfigManager
 
 router = APIRouter()
+from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager
 
-def get_plugin_manager(request: Request) -> PluginManager:
-    """
-    Dependency injection for PluginManager pulled from app.state.
-    """
-    pm = getattr(request.app.state, "plugin_manager", None)
-    if pm is None:
-        raise HTTPException(status_code=500, detail="PluginManager is not available")
-    return cast(PluginManager, pm)
 
-def get_config_manager(request: Request) -> ConfigManager:
-    """
-    Dependency injection for ConfigManager
-    """
-    cm = getattr(request.app.state, "config_manager", None)
-    if cm is None:
-        raise HTTPException(status_code=500, detail="ConfigManager is not available")
-    return cast(ConfigManager, cm)
 
 @router.get("/schemas")
 async def get_plugin_schemas(pm: PluginManager = Depends(get_plugin_manager)):
