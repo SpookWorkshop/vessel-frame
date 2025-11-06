@@ -9,7 +9,13 @@ import sys
 from pathlib import Path
 
 from logging.handlers import RotatingFileHandler
-from .plugin_types import GROUP_PROCESSORS, GROUP_RENDERER, GROUP_SOURCES, Plugin, RendererPlugin
+from .plugin_types import (
+    GROUP_PROCESSORS,
+    GROUP_RENDERER,
+    GROUP_SOURCES,
+    Plugin,
+    RendererPlugin,
+)
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
 from .config_manager import ConfigManager
@@ -26,7 +32,16 @@ Usage:
     vf --config config.toml --db db.sqlite --log-level INFO
 """
 
+
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    """Parse command-line arguments.
+
+    Args:
+        argv (list[str] | None): Optional list of arguments. If None, uses sys.argv.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
     p = argparse.ArgumentParser(prog="vessel-frame")
     p.add_argument("--config", type=Path, default=Path("config.toml"))
     p.add_argument("--db", type=Path, default=Path("db.sqlite"))
@@ -38,7 +53,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 def _log_admin_status(
     task: asyncio.Task, stop_event: asyncio.Event, logger: logging.Logger
 ) -> None:
-    """Log if admin server exits unexpectedly."""
+    """
+    Log the outcome if the admin server exits unexpectedly.
+
+    Logs a warning when the task stops cleanly but unexpectedly and logs an
+    exception on crash.
+    """
     try:
         task.result()
         logger.warning("Admin server stopped unexpectedly but cleanly")
@@ -49,6 +69,16 @@ def _log_admin_status(
 
 
 def _init_logger(level: str, log_path: Path):
+    """
+    Configure root logging with console and optional rotating file output.
+
+    Sets a formatter, clears existing handlers, and attaches a stream handler.
+    If a log path is provided, also attaches a rotating file handler.
+
+    Args:
+        level (str): Log level name (e.g., "DEBUG", "INFO", "WARNING", "ERROR").
+        log_path (Path): Path to the log file. If falsy, file logging is skipped.
+    """
     logger: logging.Logger = logging.getLogger()
 
     logger.handlers.clear()
@@ -82,6 +112,24 @@ async def _init_plugins(
     entry_point_group: str,
     logger: logging.Logger,
 ) -> list[Plugin]:
+    """
+    Instantiate and start plugins of a given type from configuration.
+
+    Reads the configured plugin names, resolves each via the plugin manager,
+    starts them and returns the list of running plugin instances.
+
+    Args:
+        config_manager (ConfigManager): Source of plugin configuration.
+        pm (PluginManager): Used to create plugin instances from entry points.
+        bus (MessageBus): Injected into each plugin's constructor kwargs.
+        plugin_type (str): The category to load the plugin from " (e.g., "sources", "processors").
+        entry_point_group (str): The Python entry point group to resolve.
+        logger (logging.Logger): Logger for status and error messages.
+
+    Returns:
+        list[Plugin]: Successfully started plugin instances (may be empty).
+    """
+
     plugins: list[Plugin] = []
     configured_plugins = config_manager.get(f"plugins.{plugin_type}", [])
 
@@ -103,6 +151,14 @@ async def _init_plugins(
 
 
 async def run(argv: list[str] | None = None) -> int:
+    """Application entry coroutine: start services, load plugins and run until stopped.
+
+    Args:
+        argv (list[str] | None): Optional CLI arguments.
+
+    Returns:
+        int: Process exit code (0 on success, non-zero on startup failure).
+    """
     args = _parse_args(argv)
 
     _init_logger(args.log_level, args.log_path)

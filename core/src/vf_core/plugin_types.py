@@ -13,44 +13,47 @@ GROUP_RENDERER = "vesselframe.plugins.renderer"
 GROUP_SCREENS = "vesselframe.plugins.screens"
 GROUP_SCHEMAS = "vesselframe.config.schemas"
 
+
 @runtime_checkable
 class Plugin(Protocol):
     async def start(self) -> None: ...
     async def stop(self) -> None: ...
 
+
 @runtime_checkable
 class RendererPlugin(Protocol):
     """
     Protocol for plugins that render visual output.
-    
+
     Renderers provide a canvas, fonts, and color palette for screens to use,
     and handle the final output (saving to file, displaying on screen, etc).
     """
-    
+
     MIN_RENDER_INTERVAL: int
-    
+
     @property
-    def canvas(self) -> 'Image.Image':
+    def canvas(self) -> "Image.Image":
         """PIL Image canvas for screens to draw on."""
         ...
-    
+
     @property
-    def fonts(self) -> dict[str, 'ImageFont.FreeTypeFont']:
+    def fonts(self) -> dict[str, "ImageFont.FreeTypeFont"]:
         """Available fonts keyed by size name (xsmall, small, medium, large)."""
         ...
-    
+
     @property
     def palette(self) -> dict[str, str]:
         """Color palette with keys: background, foreground, line, text, accent."""
         ...
-    
+
     def clear(self) -> None:
         """Clear the canvas to background color."""
         ...
-    
+
     def flush(self) -> None:
         """Output the current canvas (save to file, update display, etc)."""
         ...
+
 
 @runtime_checkable
 class ScreenPlugin(Protocol):
@@ -62,6 +65,7 @@ class ScreenPlugin(Protocol):
         """Set the screen to deactivated and no longer expect it to update"""
         ...
 
+
 class ConfigFieldType(Enum):
     STRING = "string"
     INTEGER = "integer"
@@ -71,6 +75,7 @@ class ConfigFieldType(Enum):
     COLOUR = "colour"
     FILE = "file"
     JSON = "json"
+
 
 @dataclass
 class ConfigField:
@@ -82,7 +87,7 @@ class ConfigField:
     description: str = ""
     options: list[Any] | None = None  # For SELECT
     validation: dict[str, Any] | None = None
-    
+
     def to_dict(self) -> dict:
         return {
             "key": self.key,
@@ -92,18 +97,19 @@ class ConfigField:
             "required": self.required,
             "description": self.description,
             "options": self.options,
-            "validation": self.validation
+            "validation": self.validation,
         }
+
 
 @dataclass
 class ConfigSchema:
     plugin_name: str
     plugin_type: str
     fields: list[ConfigField]
-    
+
     def to_dict(self) -> dict:
         return {
             "plugin_name": self.plugin_name,
             "plugin_type": self.plugin_type,
-            "fields": [f.to_dict() for f in self.fields]
+            "fields": [f.to_dict() for f in self.fields],
         }

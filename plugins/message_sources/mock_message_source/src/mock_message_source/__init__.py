@@ -52,15 +52,16 @@ DEFAULT_MESSAGES = [
     "!AIVDM,1,1,,B,13M@DR@000Oj?>TNT`8`@K940<1@,0*65",
     "!AIVDM,1,1,,A,13P;lhP002wj=UNNShG4VJu600Rr,0*6B",
     "!AIVDM,1,1,,A,13P8fQhP1@wj>olNSm9cR?w<24sT,0*3F",
-    "!AIVDM,1,1,,B,33ktrGU000wj@q<NSn9REJUF0D`J,0*20"
+    "!AIVDM,1,1,,B,33ktrGU000wj@q<NSn9REJUF0D`J,0*20",
 ]
+
 
 class MockMessageSource(Plugin):
     """
-    Message Source that outputs valid AIS messages onto the event bus in a loop. 
+    Message Source that outputs valid AIS messages onto the event bus in a loop.
     Messages are emitted at randomised intervals between min_delay and max_delay.
     """
-    
+
     def __init__(
         self,
         *,
@@ -72,7 +73,7 @@ class MockMessageSource(Plugin):
     ) -> None:
         if bus is None:
             raise ValueError("Mock Message Source requires MessageBus")
-        
+
         self.bus = bus
         self.topic = topic
         self.messages = messages or DEFAULT_MESSAGES
@@ -81,12 +82,14 @@ class MockMessageSource(Plugin):
         self._task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
+        """Start the background task that emits mock AIS messages."""
         if self._task and not self._task.done():
             return
-        
+
         self._task = asyncio.create_task(self._loop())
 
     async def stop(self) -> None:
+        """Stop the background emission loop and wait for clean shutdown."""
         if self._task and not self._task.done():
             self._task.cancel()
 
@@ -94,6 +97,12 @@ class MockMessageSource(Plugin):
                 await self._task
 
     async def _loop(self) -> None:
+        """
+        Continuously publish AIS messages with random timing.
+
+        Messages loop through the provided list indefinitely, with a random
+        pause between each send based on `min_delay` and `max_delay`.
+        """
         idx = 0
 
         while True:
@@ -101,6 +110,7 @@ class MockMessageSource(Plugin):
 
             idx = (idx + 1) % len(self.messages)
             await asyncio.sleep(random.uniform(self.min_delay, self.max_delay))
+
 
 def make_plugin(**kwargs: Any) -> Plugin:
     """

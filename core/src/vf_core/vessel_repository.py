@@ -2,6 +2,7 @@ import aiosqlite
 import logging
 from typing import Any
 
+
 class VesselRepository:
     def __init__(self, db_path: str) -> None:
         self._logger = logging.getLogger(__name__)
@@ -9,15 +10,22 @@ class VesselRepository:
         self._db_conn = None
 
     async def start(self) -> None:
+        """Connect to the database and initialise the schema if needed."""
         self._db_conn = await aiosqlite.connect(self._db_path)
         self._db_conn.row_factory = aiosqlite.Row
         await self._initialise_schema()
 
     async def _initialise_schema(self) -> None:
+        """
+        Create the database schema if it does not already exist.
+
+        Creates the `vessels` table and supporting indexes for efficient lookup.
+        Logs an error if called before the database connection is established.
+        """
         if not self._db_conn:
             self._logger.error("Database not connected")
             return None
-    
+
         await self._db_conn.execute("""
             CREATE TABLE IF NOT EXISTS vessels (
                 mmsi TEXT PRIMARY KEY,
@@ -46,10 +54,25 @@ class VesselRepository:
     async def upsert_vessel(
         self, vessel_data: dict[str, Any], allow_static_update: bool
     ) -> dict[str, Any] | None:
+        """
+        Insert or update a vessel record in the database.
+
+        On first sighting the vessel is inserted. On subsequent updates, the
+        record's `last_sight` timestamp is updated. Static vessel data
+        (e.g. name, type) is updated only if `allow_static_update` is True.
+
+        Args:
+            vessel_data (dict[str, Any]): Vessel data fields to insert or update.
+            allow_static_update (bool): Whether to update static information such
+                as name, type, or dimensions.
+
+        Returns:
+            dict[str, Any] | None: The upserted vessel record, or None if an error occurred.
+        """
         if not self._db_conn:
             self._logger.error("Database not connected")
             return None
-    
+
         query = """
             INSERT INTO vessels (
                 mmsi, imo, name, callsign, type, bow, stern, port, starboard,
@@ -97,10 +120,19 @@ class VesselRepository:
             return None
 
     async def get_vessel(self, mmsi: str) -> dict[str, Any] | None:
+        """
+        Fetch a vessel record by its MMSI.
+
+        Args:
+            mmsi (str): The vessel's MMSI identifier.
+
+        Returns:
+            dict[str, Any] | None: The vessel record if found, otherwise None.
+        """
         if not self._db_conn:
             self._logger.error("Database not connected")
             return None
-    
+
         try:
             cursor = await self._db_conn.execute(
                 "SELECT * FROM vessels WHERE mmsi = ?", (mmsi,)
@@ -114,6 +146,16 @@ class VesselRepository:
             return None
 
     async def get_vessel_stats(self) -> dict[str, Any] | None:
+        """
+        Return aggregate statistics for tracked vessels.
+
+        Computes totals and counts of identified and unidentified vessels,
+        including the percentage identified.
+
+        Returns:
+            dict[str, Any] | None: A dictionary containing total, identified,
+            unknown, and percent_identified fields, or None if an error occurred.
+        """
         try:
             cursor = await self._db_conn.execute("""
                 SELECT 
@@ -125,18 +167,24 @@ class VesselRepository:
             result = await cursor.fetchone()
             if result:
                 stats = dict(result)
-                if stats['total'] > 0:
-                    stats['percent_identified'] = round(
-                        100.0 * stats['identified'] / stats['total'], 1
+                if stats["total"] > 0:
+                    stats["percent_identified"] = round(
+                        100.0 * stats["identified"] / stats["total"], 1
                     )
                 else:
-                    stats['percent_identified'] = 0.0
+                    stats["percent_identified"] = 0.0
                 return stats
-            return {'total': 0, 'identified': 0, 'unknown': 0, 'percent_identified': 0.0}
+            return {
+                "total": 0,
+                "identified": 0,
+                "unknown": 0,
+                "percent_identified": 0.0,
+            }
         except aiosqlite.Error as e:
             self._logger.exception("Error fetching stats")
             return None
 
     async def stop(self) -> None:
+        """Close the database connection if open."""
         if self._db_conn:
             await self._db_conn.close()

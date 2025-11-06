@@ -1,4 +1,4 @@
-VESSEL_TYPES: dict[int,str] = {
+VESSEL_TYPES: dict[int, str] = {
     -1: "Unknown",
     0: "Unknown",
     20: "Wing in Ground",
@@ -24,25 +24,28 @@ VESSEL_TYPES: dict[int,str] = {
     60: "Passenger Ship",
     70: "Cargo Ship",
     80: "Tanker",
-    90: "Other"
+    90: "Other",
 }
 
-VESSEL_SUBCATS: dict[int,str] = {
+VESSEL_SUBCATS: dict[int, str] = {
     1: "Hazardous (High)",
     2: "Hazardous",
     3: "Hazardous (Low)",
-    4: "Non-hazardous"
+    4: "Non-hazardous",
 }
+
 
 def get_vessel_type_name(type_code: int | None) -> str:
     """
-    Get vessel type from AIS type code.
-    
+    Return a descriptive vessel type name for a given AIS type code.
+
     Args:
-        type_code: AIS vessel type code
-        
+        type_code (int | None): The AIS vessel type code. Can be `None` if unknown.
+
     Returns:
-        Vessel type description
+        str: A human-readable vessel type description, or:
+            - "Unknown" if `type_code` is `None`
+            - "Reserved" if the code doesn’t match any known type or base category
     """
     if type_code is None:
         return "Unknown"
@@ -61,39 +64,45 @@ def get_vessel_type_name(type_code: int | None) -> str:
 
     return vessel_type
 
+
 def get_vessel_subtype_name(type_code: int | None) -> str | None:
     """
-    Get vessel subtype from AIS type code. Subtypes can indicate the potential cargo and level of hazardousness
-    
+    Return the vessel subtype description for a given AIS type code.
+
+    Subtypes indicate potential cargo type or level of hazardousness.
+
     Args:
-        type_code: AIS vessel type code
-        
+        type_code (int | None): The AIS vessel type code. Can be `None` if unknown.
+
     Returns:
-        Vessel type description
+        str | None: A descriptive vessel subtype name if applicable, otherwise `None`.
     """
     if type_code is None:
         return None
-    
+
     # If there's an exact match in VESSEL_TYPES, no subtype applies
     if type_code in VESSEL_TYPES:
         return None
-    
+
     # Subtype only applies when using base category fallback
     sub_cat = type_code % 10
     return VESSEL_SUBCATS.get(sub_cat)
 
+
 def get_vessel_full_type_name(type_code: int | None) -> str:
     """
-    Get vessel main and subtype from AIS type code.
-    
+    Return the combined vessel type and subtype description for a given AIS type code.
+
+    The result includes both the main vessel type and, if applicable, the subtype
+    (indicating cargo type or hazardousness).
+
     Args:
-        type_code: AIS vessel type code
-        
+        type_code (int | None): The AIS vessel type code. Can be `None` if unknown.
+
     Returns:
-        Vessel type and subtype description if available
-        eg:
-         "Port Tender" [without subtype]
-         "Cargo Ship - Hazardous (High)" [with subtype]
+        str: A human-readable vessel type description. Examples:
+            - "Port Tender" (no subtype)
+            - "Cargo Ship - Hazardous (High)" (with subtype)
     """
     main_type = get_vessel_type_name(type_code)
     sub_type = get_vessel_subtype_name(type_code)

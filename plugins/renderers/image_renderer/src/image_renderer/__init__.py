@@ -1,10 +1,18 @@
 from __future__ import annotations
 from typing import Any
-from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, RendererPlugin
+from vf_core.plugin_types import (
+    ConfigField,
+    ConfigFieldType,
+    ConfigSchema,
+    RendererPlugin,
+)
 from PIL import Image, ImageFont, ImageDraw
 from pathlib import Path
 
+
 class ImageRenderer(RendererPlugin):
+    """Renderer plugin that draws an image canvas using Pillow."""
+
     MIN_RENDER_INTERVAL: int = 0
 
     def __init__(
@@ -13,20 +21,20 @@ class ImageRenderer(RendererPlugin):
         out_path: str = "data/image.png",
         width: int = 480,
         height: int = 800,
-        orientation: str = "portrait"
+        orientation: str = "portrait",
     ) -> None:
         plugin_dir = Path(__file__).parent
-        font_path = plugin_dir / 'fonts' / 'Inter' / 'Inter-VariableFont_opsz,wght.ttf'
+        font_path = plugin_dir / "fonts" / "Inter" / "Inter-VariableFont_opsz,wght.ttf"
 
         if not font_path.exists():
             raise FileNotFoundError(f"Font file not found: {font_path}")
 
         try:
             self._fonts = {
-                'xsmall': ImageFont.truetype(font_path, 8),
-                'small': ImageFont.truetype(font_path, 14),
-                'medium': ImageFont.truetype(font_path, 20),
-                'large': ImageFont.truetype(font_path, 35),
+                "xsmall": ImageFont.truetype(font_path, 8),
+                "small": ImageFont.truetype(font_path, 14),
+                "medium": ImageFont.truetype(font_path, 20),
+                "large": ImageFont.truetype(font_path, 35),
             }
         except Exception as e:
             raise RuntimeError(f"Failed to load fonts from {font_path}: {e}") from e
@@ -35,7 +43,9 @@ class ImageRenderer(RendererPlugin):
         self._orientation = orientation
 
         # Swap width and height if they weren't passed in a way that expresses the orientation
-        if (orientation == "portrait" and width > height) or (orientation == "landscape" and height > width):
+        if (orientation == "portrait" and width > height) or (
+            orientation == "landscape" and height > width
+        ):
             self._width = int(height)
             self._height = int(width)
         else:
@@ -47,31 +57,52 @@ class ImageRenderer(RendererPlugin):
         path.parent.mkdir(parents=True, exist_ok=True)
 
     def flush(self) -> None:
+        """Save the current canvas to the configured output path."""
         self.canvas.save(self._out_path, "png")
 
     def clear(self) -> None:
+        """Clear the canvas by filling it with the background colour."""
         draw = ImageDraw.Draw(self._canvas)
-        draw.rectangle([(0, 0),(self._width, self._height)], fill=self.palette['background'])
+        draw.rectangle(
+            [(0, 0), (self._width, self._height)], fill=self.palette["background"]
+        )
 
     @property
     def palette(self) -> dict[str, str]:
+        """Colour palette for drawing operations.
+
+        Returns:
+            dict[str, str]: A mapping of theme colour names to hex values.
+        """
+
         return {
-            'background': '#0000FF',
-            'foreground': '#FFFFFF',
-            'line': '#0000FF',
-            'text': '#0000FF',
-            'accent': '#000000'
+            "background": "#0000FF",
+            "foreground": "#FFFFFF",
+            "line": "#0000FF",
+            "text": "#0000FF",
+            "accent": "#000000",
         }
 
     @property
     def canvas(self) -> Image.Image:
+        """Current Pillow image canvas."""
         return self._canvas
 
     @property
-    def fonts(self) -> dict[str,ImageFont.FreeTypeFont]:
+    def fonts(self) -> dict[str, ImageFont.FreeTypeFont]:
+        """Dictionary of preloaded font sizes."""
         return self._fonts
-    
+
+
 def get_config_schema() -> ConfigSchema:
+    """Return the config schema for this plugin.
+
+    Defines editable fields for the admin panel.
+
+    Returns:
+        ConfigSchema: Schema describing this plugin's configuration options.
+    """
+    
     return ConfigSchema(
         plugin_name="image_renderer",
         plugin_type="renderer",
@@ -81,7 +112,7 @@ def get_config_schema() -> ConfigSchema:
                 label="File Path",
                 field_type=ConfigFieldType.STRING,
                 default="data/image.png",
-                description="File output path"
+                description="File output path",
             ),
             ConfigField(
                 key="width",
@@ -100,10 +131,11 @@ def get_config_schema() -> ConfigSchema:
                 label="Orientation",
                 field_type=ConfigFieldType.SELECT,
                 default="portrait",
-                options=["portrait","landscape"]
-            )
-        ]
+                options=["portrait", "landscape"],
+            ),
+        ],
     )
+
 
 def make_plugin(**kwargs: Any) -> RendererPlugin:
     """
