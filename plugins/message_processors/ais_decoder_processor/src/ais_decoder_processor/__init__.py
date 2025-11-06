@@ -6,6 +6,7 @@ from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import Plugin
 from pyais.queue import NMEAQueue
 from pyais.stream import TagBlockQueue
+import logging
 
 class AISDecoderProcessor(Plugin):
     """
@@ -21,15 +22,17 @@ class AISDecoderProcessor(Plugin):
     ) -> None:
         if bus is None:
             raise ValueError("AIS Decoder Processor requires MessageBus")
+        
+        self._logger = logging.getLogger(__name__)
 
         tbq: TagBlockQueue = TagBlockQueue()
 
-        self.bus = bus
-        self.in_topic = in_topic
-        self.out_topic = out_topic
+        self._bus = bus
+        self._in_topic = in_topic
+        self._out_topic = out_topic
         self._receive_task: asyncio.Task[None] | None = None
         self._decode_task: asyncio.Task[None] | None = None
-        self.message_queue: NMEAQueue = NMEAQueue(tbq=tbq)
+        self._message_queue: NMEAQueue = NMEAQueue(tbq=tbq)
 
     async def start(self) -> None:
         if self._receive_task and not self._receive_task.done():
@@ -52,27 +55,27 @@ class AISDecoderProcessor(Plugin):
     async def _receive_loop(self) -> None:
         """Receive AIS messages and queues them for decoding"""
         try:
-            async for msg in self.bus.subscribe(self.in_topic):
+            async for msg in self._bus.subscribe(self._in_topic):
                 if isinstance(msg, str):
                     msg = msg.encode('utf-8')
                 
-                self.message_queue.put_line(msg)
+                self._message_queue.put_line(msg)
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
-            print("[ais_decoder_processor] Receive loop cancelled")
+            self._logger.exception("Receive loop cancelled")
             raise
         except Exception as e:
-            print(f"[ais_decoder_processor] Receive loop crashed: {e}")
+            self._logger.exception("Receive loop crashed")
             raise
 
     async def _decode_loop(self) -> None:
         """Decode previously queued messages and output over message bus"""
         try:
             while True:
-                ais_message = self.message_queue.get_or_none()
+                ais_message = self._message_queue.get_or_none()
                 
                 if not ais_message:
-                    await asyncio.sleep(0.01)
+                    await asyncio.sleep(0.1)
                     continue
 
                 try:
@@ -82,14 +85,14 @@ class AISDecoderProcessor(Plugin):
                         if isinstance(value, bytes):
                             decoded_sentence[key] = value.decode('utf-8', errors='ignore')
                     
-                    await self.bus.publish(self.out_topic, decoded_sentence)
+                    await self._bus.publish(self._out_topic, decoded_sentence)
                 except Exception as e:
-                    print(f"[ais_decoder_processor] Failed decoding message: {e}")
+                    self._logger.exception("Failed decoding message")
         except asyncio.CancelledError:
-            print("[ais_decoder_processor] Decode loop cancelled")
+            self._logger.exception("Decode loop cancelled")
             raise
         except Exception as e:
-            print(f"[ais_decoder_processor] Decode loop crashed: {e}")
+            self._logger.exception("Decode loop crashed")
             raise
 
 def make_plugin(**kwargs: Any) -> Plugin:
