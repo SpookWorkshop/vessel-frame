@@ -46,9 +46,49 @@ async def update_config(
     """
     Update a config value
     """
+
+    # Validate path
+    if not update.path or not update.path.strip():
+        raise HTTPException(status_code=400, detail="Config path cannot be empty")
+    
+    if len(update.path) > 200:
+        raise HTTPException(status_code=400, detail="Config path too long")
+    
+    if not _is_valid_config_path(update.path, pm):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid config path '{update.path}'. Path must match a field in the plugin's schema."
+        )
+
     try:
         cm.set(update.path, update.value)
         cm.save()
         return {"success": True, "path": update.path, "value": update.value}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+def _is_valid_config_path(path: str, pm: PluginManager) -> bool:
+    """Check if a config path is valid against plugin schemas."""
+    parts = path.split(".", 1)
+    
+    if len(parts) != 2:
+        return False
+    
+    plugin_name, field_key = parts
+    
+    # Try to load the plugin's schema
+    try:
+        schema_func = pm.load_factory(GROUP_SCHEMAS, plugin_name)
+        schema = schema_func()
+        
+        # Check if field_key exists in schema
+        valid_keys = {field.key for field in schema.fields}
+        return field_key in valid_keys
+        
+    except KeyError:
+        # No schema found for this plugin
+        logger.warning(f"No schema found for plugin '{plugin_name}'")
+        return False
+    except Exception:
+        logger.exception(f"Error loading schema for plugin '{plugin_name}'")
+        return False
