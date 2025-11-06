@@ -18,12 +18,18 @@ class ImageRenderer(RendererPlugin):
         plugin_dir = Path(__file__).parent
         font_path = plugin_dir / 'fonts' / 'Inter' / 'Inter-VariableFont_opsz,wght.ttf'
 
-        self._fonts = {
-            'xsmall': ImageFont.truetype(font_path, 8),
-            'small': ImageFont.truetype(font_path, 14),
-            'medium': ImageFont.truetype(font_path, 20),
-            'large': ImageFont.truetype(font_path, 35),
-        }
+        if not font_path.exists():
+            raise FileNotFoundError(f"Font file not found: {font_path}")
+
+        try:
+            self._fonts = {
+                'xsmall': ImageFont.truetype(font_path, 8),
+                'small': ImageFont.truetype(font_path, 14),
+                'medium': ImageFont.truetype(font_path, 20),
+                'large': ImageFont.truetype(font_path, 35),
+            }
+        except Exception as e:
+            raise RuntimeError(f"Failed to load fonts from {font_path}: {e}") from e
 
         self._out_path = out_path
         self._orientation = orientation
@@ -40,10 +46,10 @@ class ImageRenderer(RendererPlugin):
         path = Path(out_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-    def flush(self):
+    def flush(self) -> None:
         self.canvas.save(self._out_path, "png")
 
-    def clear(self):
+    def clear(self) -> None:
         draw = ImageDraw.Draw(self._canvas)
         draw.rectangle([(0, 0),(self._width, self._height)], fill=self.palette['background'])
 
@@ -62,7 +68,7 @@ class ImageRenderer(RendererPlugin):
         return self._canvas
 
     @property
-    def fonts(self) -> list[ImageFont]:
+    def fonts(self) -> dict[str,ImageFont.FreeTypeFont]:
         return self._fonts
     
 def get_config_schema() -> ConfigSchema:
