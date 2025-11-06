@@ -1,6 +1,8 @@
 from __future__ import annotations
 import asyncio
-import serial
+import serial_asyncio
+import logging
+
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
@@ -13,11 +15,15 @@ class COMMessageSource(Plugin):
         bus: MessageBus,
         topic: str = "ais.raw",
         baud_rate: int = 38400,
-        port: str = None
+        port: str
     ) -> None:
         if bus is None:
             raise ValueError("COM Message Source requires MessageBus")
         
+        if port is None:
+            raise ValueError("COM Message Source requires port")
+        
+        self._logger = logging.getLogger(__name__)
         self.bus = bus
         self.topic = topic
         self.baud_rate = baud_rate
@@ -42,21 +48,23 @@ class COMMessageSource(Plugin):
             self.serial.close()
 
     async def _loop(self) -> None:
-        self.serial = serial.Serial(
-            port=self.port,
-            baudrate=self.baud_rate,
-            timeout=1
-        )
+        try:
+            reader, writer = await serial_asyncio.open_serial_connection(
+                    url=self.port,
+                    baudrate=self.baud_rate
+                )
 
-        while True:
-            line = self.serial.readline()
-            if line:
-                message = line.decode('ascii', errors='ignore').strip()
-                if message:
-                    await self.bus.publish(self.topic, message)
-            
-            # Give other tasks a chance to run
-            await asyncio.sleep(0)
+            while True:
+                line = await reader.readline()
+                if line:
+                    message = line.decode('ascii', errors='ignore').strip()
+                    if message:
+                        await self.bus.publish(self.topic, message)
+                
+                # Give other tasks a chance to run
+                await asyncio.sleep(0)
+        except Exception:
+            self._logger.exception("COM message source error")
 
 def get_config_schema() -> ConfigSchema:
     return ConfigSchema(

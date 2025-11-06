@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "com-message-source"
 version = "0.0.0"
 requires-python = ">=3.10"
-dependencies = ["pyserial>=3.5"]
+dependencies = ["pyserial-asyncio"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
