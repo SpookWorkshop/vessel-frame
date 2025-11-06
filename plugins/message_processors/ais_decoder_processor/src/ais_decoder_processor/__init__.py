@@ -72,9 +72,9 @@ class AISDecoderProcessor(Plugin):
                 self._message_queue.put_line(msg)
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
-            self._logger.exception("Receive loop cancelled")
+            self._logger.info("Receive loop cancelled")
             raise
-        except Exception as e:
+        except Exception:
             self._logger.exception("Receive loop crashed")
             raise
 
@@ -104,12 +104,12 @@ class AISDecoderProcessor(Plugin):
                             )
 
                     await self._bus.publish(self._out_topic, decoded_sentence)
-                except Exception as e:
+                except Exception:
                     self._logger.exception("Failed decoding message")
         except asyncio.CancelledError:
-            self._logger.exception("Decode loop cancelled")
+            self._logger.info("Decode loop cancelled")
             raise
-        except Exception as e:
+        except Exception:
             self._logger.exception("Decode loop crashed")
             raise
 
