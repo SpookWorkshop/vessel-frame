@@ -62,3 +62,15 @@ class ConfigManager:
             config = config[k]
 
         config[keys[-1]] = copy.deepcopy(value)
+
+    def has(self, key: str) -> bool:
+        """Check if a config key exists"""
+        keys = key.split(".")
+        value = self._cfg
+
+        for k in keys:
+            if not isinstance(value, dict) or k not in value:
+                return False
+            value = value[k]
+        
+        return True
