@@ -119,12 +119,14 @@ def get_config_schema() -> ConfigSchema:
                 label="Width",
                 field_type=ConfigFieldType.INTEGER,
                 default=480,
+                required=True
             ),
             ConfigField(
                 key="height",
                 label="Height",
                 field_type=ConfigFieldType.INTEGER,
                 default=800,
+                required=True
             ),
             ConfigField(
                 key="orientation",
