@@ -5,6 +5,7 @@ from pathlib import Path
 import uvicorn
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
+from vf_core.web_admin.api import system
 
 from .api import config, plugins
 
@@ -23,6 +24,7 @@ app = FastAPI(title="Vessel Frame Admin Panel")
 # Mount API routes
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(plugins.router, prefix="/api/plugins", tags=["plugins"])
+app.include_router(system.router, prefix="/api/system", tags=["system"])
 
 # Serve static files
 static_dir = Path(__file__).parent / "static"

@@ -3,18 +3,26 @@ class AdminPanel {
         this.pluginList = {};
         this.schemas = {};
         this.currentConfig = {};
+        this.systemConfig = {};
         this.init();
     }
     
     async init() {
-        this.pluginList = await this.fetchAvailablePlugins();
-        this.schemas = await this.fetchPluginSchemas();
-        this.currentConfig = await this.fetchConfig();
-
+        await this.loadAllData();
         this.renderPluginList();
         this.showSystemSettings();
     }
 
+    async loadAllData() {
+        [this.systemConfig, this.pluginList, this.schemas, this.currentConfig] = await Promise.all([
+            this.fetchSystemConfig(),
+            this.fetchAvailablePlugins(),
+            this.fetchPluginSchemas(),
+            this.fetchConfig()
+        ]);
+    }
+
+    // API Calls
     async fetchAvailablePlugins() {
         const response = await fetch('/api/plugins/available');
         return await response.json();
@@ -30,100 +38,108 @@ class AdminPanel {
         return await response.json();
     }
 
-    async enablePlugin(category, plugin) {
-        await fetch('/api/plugins/enable/', {
+    async fetchSystemConfig() {
+        const response = await fetch('/api/system');
+        return await response.json();
+    }
+
+    async togglePlugin(category, plugin, enable) {
+        const endpoint = enable ? 'enable' : 'disable';
+        await fetch(`/api/plugins/${endpoint}/`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({category: category, name: plugin})
+            body: JSON.stringify({category, name: plugin})
         });
 
-        this.schemas = await this.fetchPluginSchemas();
-        this.currentConfig = await this.fetchConfig();
-        console.log(this.schemas);
-        console.log(this.currentConfig);
-
+        await this.loadAllData();
         this.renderPluginList();
         
-        alert('Plugin Enabled! Restart may be required.');
+        alert(`Plugin ${enable ? 'Enabled' : 'Disabled'}! Restart may be required.`);
+    }
+
+    async enablePlugin(category, plugin) {
+        await this.togglePlugin(category, plugin, true);
     }
 
     async disablePlugin(category, plugin) {
-        await fetch('/api/plugins/disable/', {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({category: category, name: plugin})
-        });
-
-        this.schemas = await this.fetchPluginSchemas();
-        this.currentConfig = await this.fetchConfig();
-        console.log(this.schemas);
-        console.log(this.currentConfig);
-
-        this.renderPluginList();
-        
-        alert('Plugin Disabled! Restart may be required.');
+        await this.togglePlugin(category, plugin, false);
     }
     
+    // Rendering
     renderPluginList() {
         const list = document.getElementById('plugin-list');
         list.innerHTML = '';
 
-        const enabledPlugins = this.currentConfig['plugins'] || [];
+        const enabledPlugins = this.currentConfig['plugins'] || {};
 
         for (const [category, plugins] of Object.entries(this.pluginList)) {
             for (const plugin of plugins) {
                 const isEnabled = Boolean(enabledPlugins[category]?.includes(plugin));
-
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `<div class="flex" style="justify-content: space-between;">
-                    <h2>${plugin}</h2>
-                    <button>${isEnabled ? 'Disable' : 'Enable'}</button>
-                </div>
-                <div class="plugin-config"></div>`;
-
-                const button = card.querySelector('button');
-                button.addEventListener('click', () => {
-                    isEnabled ? this.disablePlugin(category,plugin) : this.enablePlugin(category, plugin);
-                });
-
-                if(isEnabled){
-                    const schema = this.schemas[plugin];
-                    const pluginCtnr = card.querySelector('.plugin-config');
-
-                    if(schema && pluginCtnr){
-                        this.showPluginConfig(pluginCtnr, schema);
-                    }
-                }
-
+                const card = this.createPluginCard(category, plugin, isEnabled);
                 list.appendChild(card);
             }
         }
     }
+
+    createPluginCard(category, plugin, isEnabled) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        card.innerHTML = `
+            <div class="flex" style="justify-content: space-between;">
+                <h2>${plugin}</h2>
+                <button>${isEnabled ? 'Disable' : 'Enable'}</button>
+            </div>
+            <div class="plugin-config"></div>
+        `;
+
+        const button = card.querySelector('button');
+        button.addEventListener('click', () => {
+            isEnabled ? this.disablePlugin(category, plugin) : this.enablePlugin(category, plugin);
+        });
+
+        if (isEnabled) {
+            const schema = this.schemas[plugin];
+            const container = card.querySelector('.plugin-config');
+            if (schema && container) {
+                this.showConfigForm(container, schema, plugin, this.savePluginConfig.bind(this));
+            }
+        }
+
+        return card;
+    }
     
-    showPluginConfig(container, schema) {
+    showConfigForm(container, schema, configKey, saveCallback) {
         container.innerHTML = '';
 
         const form = document.createElement('form');
-        form.id = 'plugin-form';
         
         for (const field of schema.fields) {
-            const fieldDiv = this.createFormField(field, schema.plugin_name);
+            const currentValue = this.getCurrentValue(configKey, field);
+            const fieldDiv = this.createFormField(field, currentValue);
             form.appendChild(fieldDiv);
         }
         
         const saveBtn = document.createElement('button');
         saveBtn.textContent = 'Save';
+        saveBtn.type = 'submit';
         saveBtn.onclick = (e) => {
             e.preventDefault();
-            this.savePluginConfig(schema.plugin_name, form);
+            saveCallback(configKey, form);
         };
         form.appendChild(saveBtn);
 
         container.appendChild(form);
     }
+
+    getCurrentValue(configKey, field) {
+        if (configKey === 'System') {
+            return this.systemConfig[field.key] ?? field.default;
+        }
+        return this.currentConfig[configKey]?.[field.key] ?? field.default;
+    }
     
-    createFormField(field, pluginName) {
+    createFormField(field, currentValue) {
         const div = document.createElement('div');
         div.className = 'form-field';
         
@@ -132,9 +148,23 @@ class AdminPanel {
         label.htmlFor = field.key;
         div.appendChild(label);
         
-        const currentValue = this.currentConfig[pluginName]?.[field.key] ?? field.default;
+        const input = this.createInput(field, currentValue);
+        input.id = field.key;
+        input.name = field.key;
+        div.appendChild(input);
         
+        if (field.description) {
+            const desc = document.createElement('small');
+            desc.textContent = field.description;
+            div.appendChild(desc);
+        }
+        
+        return div;
+    }
+
+    createInput(field, currentValue) {
         let input;
+        
         switch (field.type) {
             case 'string':
                 input = document.createElement('input');
@@ -174,38 +204,85 @@ class AdminPanel {
                 input.type = 'color';
                 input.value = currentValue;
                 break;
+
+            default:
+                input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentValue;
         }
         
-        input.id = field.key;
-        input.name = field.key;
-        div.appendChild(input);
-        
-        if (field.description) {
-            const desc = document.createElement('small');
-            desc.textContent = field.description;
-            div.appendChild(desc);
-        }
-        
-        return div;
+        return input;
     }
     
-    async savePluginConfig(pluginName, form) {
-        const formData = new FormData(form);
-        
+    async saveConfig(endpoint, formData, pathTransform) {
         for (const [key, value] of formData.entries()) {
-            const path = `${pluginName}.${key}`;
+            const payload = pathTransform(key, value);
             
-            await fetch('/api/config/', {
+            await fetch(endpoint, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({path, value})
+                body: JSON.stringify(payload)
             });
         }
         
         alert('Configuration saved! Restart may be required.');
     }
-    
+
+    async savePluginConfig(pluginName, form) {
+        const formData = new FormData(form);
+        await this.saveConfig(
+            '/api/config/',
+            formData,
+            (key, value) => ({
+                path: `${pluginName}.${key}`,
+                value
+            })
+        );
+    }
+
+    async saveSystemConfig(form) {
+        const formData = new FormData(form);
+        await this.saveConfig(
+            '/api/system/',
+            formData,
+            (key, value) => ({ key, value })
+        );
+    }
+
     showSystemSettings() {
+        const schema = {
+            plugin_name: "System",
+            plugin_type: "system",
+            fields: [
+                {
+                    key: "mapbox_api_key",
+                    label: "Mapbox API Key",
+                    type: "string",
+                    default: "",
+                    required: false,
+                    description: "API key for Mapbox services (used by admin panel)",
+                }
+            ]
+        };
+
+        const list = document.getElementById('system');
+        list.innerHTML = '';
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <div class="flex" style="justify-content: space-between;">
+                <h2>System</h2>
+            </div>
+            <div class="system-config"></div>
+        `;
+
+        const container = card.querySelector('.system-config');
+        if (schema && container) {
+            this.showConfigForm(container, schema, 'System', this.saveSystemConfig.bind(this));
+        }
+
+        list.appendChild(card);
     }
 }
 
