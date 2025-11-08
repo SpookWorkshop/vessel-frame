@@ -88,16 +88,18 @@ async def enable_plugin(
     Raises:
         HTTPException: If the plugin is not found in the specified category (404).
     """
+    category = update.category.value
+
     # Make sure plugin exists
-    available = pm.names(PLUGIN_GROUPS.get(update.category, ""))
+    available = pm.names(PLUGIN_GROUPS.get(category, ""))
     if update.name not in available:
         raise HTTPException(
             status_code=404,
-            detail=f"Plugin '{update.name}' not found in category '{update.category}'",
+            detail=f"Plugin '{update.name}' not found in category '{category}'",
         )
 
     # Get current plugin list
-    plugin_list_key = f"plugins.{update.category}"
+    plugin_list_key = f"plugins.{category}"
     plugin_list = cm.get(plugin_list_key, [])
 
     # Don't add duplicates
