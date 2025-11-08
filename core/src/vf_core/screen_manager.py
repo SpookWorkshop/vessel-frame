@@ -1,4 +1,6 @@
 import logging
+
+from vf_core.config_manager import ConfigManager
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
 from .plugin_types import GROUP_SCREENS, RendererPlugin, ScreenPlugin
@@ -12,6 +14,7 @@ class ScreenManager:
         pm: PluginManager,
         renderer: RendererPlugin,
         vm: VesselManager,
+        cm: ConfigManager
     ) -> None:
         self._logger = logging.getLogger(__name__)
         self._bus = bus
@@ -19,6 +22,7 @@ class ScreenManager:
         self._screens: list[ScreenPlugin] = []
         self._renderer = renderer
         self._vm = vm
+        self._cm = cm
         self._active_screen: ScreenPlugin | None = None
 
     async def start(self) -> None:
@@ -30,12 +34,16 @@ class ScreenManager:
         warning if no screens are found.
         """
         for entry_point in self._pm.iter_entry_points(GROUP_SCREENS):
+            plugin_config = self._cm.get(entry_point.name)
+            kwargs = plugin_config if isinstance(plugin_config, dict) else {}
+
             screen: ScreenPlugin = self._pm.create(
                 GROUP_SCREENS,
                 entry_point.name,
-                bus=self._bus,
                 renderer=self._renderer,
                 vm=self._vm,
+                bus=self._bus,
+                **kwargs
             )
             self._screens.append(screen)
 

@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import logging
 
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import ScreenPlugin, RendererPlugin
+from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin
 from vf_core.vessel_manager import VesselManager
 from vf_core.ais_utils import get_vessel_full_type_name
 from vf_core.render_strategies import PeriodicRenderStrategy
@@ -43,6 +43,10 @@ class ZoneScreen(ScreenPlugin):
         vm: VesselManager,
         in_topic: str = "vessel.zone_entered",
         update_interval: float = 10.0,
+        zone_name: str,
+        zone_lat: float,
+        zone_lon: float,
+        zone_rad: float
     ) -> None:
         self._logger = logging.getLogger(__name__)
 
@@ -56,6 +60,8 @@ class ZoneScreen(ScreenPlugin):
         self._render_strategy = PeriodicRenderStrategy(
             self._render, renderer.MIN_RENDER_INTERVAL + update_interval
         )
+
+        self._vessel_manager.register_zone(zone_name, zone_lat, zone_lon, zone_rad)
 
     async def activate(self) -> None:
         """Start listening for zone events and enable periodic rendering."""
@@ -488,6 +494,44 @@ class ZoneScreen(ScreenPlugin):
         bbox = font.getbbox(text)
         return (bbox[2] - bbox[0], bbox[3] - bbox[1])
 
+def get_config_schema() -> ConfigSchema:
+    """Return the config schema for this plugin.
+
+    Defines editable fields for the admin panel.
+
+    Returns:
+        ConfigSchema: Schema describing this plugin's configuration options.
+    """
+    return ConfigSchema(
+        plugin_name="zone_screen",
+        plugin_type="screen",
+        fields=[
+            ConfigField(
+                key="zone_name",
+                label="Zone Name",
+                field_type=ConfigFieldType.STRING,
+                default="zone"
+            ),
+            ConfigField(
+                key="zone_lat",
+                label="Latitude",
+                field_type=ConfigFieldType.FLOAT,
+                default=0
+            ),
+            ConfigField(
+                key="zone_lon",
+                label="Longitude",
+                field_type=ConfigFieldType.FLOAT,
+                default=0
+            ),
+            ConfigField(
+                key="zone_rad",
+                label="Radius",
+                field_type=ConfigFieldType.FLOAT,
+                default=0
+            ),
+        ],
+    )
 
 def make_plugin(**kwargs: Any) -> ScreenPlugin:
     """Factory function for plugin system"""

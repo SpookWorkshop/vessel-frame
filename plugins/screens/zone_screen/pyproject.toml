@@ -13,3 +13,6 @@ where = ["src"]
 
 [project.entry-points."vesselframe.plugins.screens"]
 zone_screen = "zone_screen:make_plugin"
+
+[project.entry-points."vesselframe.config.schemas"]
+zone_screen = "zone_screen:get_config_schema"

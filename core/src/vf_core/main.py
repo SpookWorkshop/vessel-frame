@@ -212,7 +212,7 @@ async def run(argv: list[str] | None = None) -> int:
             GROUP_RENDERER, configured_renderer, **kwargs
         )
 
-        sm = ScreenManager(bus, pm, renderer, vm)
+        sm = ScreenManager(bus, pm, renderer, vm, cm=config_manager)
         await sm.start()
     else:
         logger.warning("No renderer created")

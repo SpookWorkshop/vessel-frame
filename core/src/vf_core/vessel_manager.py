@@ -337,6 +337,11 @@ class VesselManager:
 
         return None
 
+    def register_zone(self, zone_name, zone_lat, zone_lon, zone_rad):
+        self._zones.append(
+            {"name": zone_name, "lat": zone_lat, "lon": zone_lon, "radius": zone_rad}
+        )
+
     def get_vessel(self, mmsi: str) -> dict[str, Any] | None:
         """Retrieve a tracked vessel by its MMSI."""
         return self._vessels.get(mmsi)
