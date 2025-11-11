@@ -4,10 +4,17 @@ class AdminPanel {
         this.schemas = {};
         this.currentConfig = {};
         this.systemConfig = {};
+        this.authKey;
         this.init();
     }
     
     async init() {
+        this.authKey = localStorage.getItem('atoken');
+
+        if(!this.authKey){
+            window.location = 'static/auth.html';
+        }
+
         await this.loadAllData();
         this.renderPluginList();
         this.showSystemSettings();
@@ -22,30 +29,47 @@ class AdminPanel {
         ]);
     }
 
+    async fetchAuthenticatedEndpoint(endpoint, options = {headers:{}}){
+        const result = await fetch(endpoint, {
+            ...options,
+            headers: {
+                ...options.headers,
+                'Authorization': `Bearer ${this.authKey}`
+            }
+        });
+
+        if(result.status === 401){
+            localStorage.removeItem('atoken');
+            window.location = 'static/auth.html';
+        }
+
+        return result;
+    }
+
     // API Calls
     async fetchAvailablePlugins() {
-        const response = await fetch('/api/plugins/available');
+        const response = await this.fetchAuthenticatedEndpoint('/api/plugins/available');
         return await response.json();
     }
     
     async fetchPluginSchemas() {
-        const response = await fetch('/api/plugins/schemas');
+        const response = await this.fetchAuthenticatedEndpoint('/api/plugins/schemas');
         return await response.json();
     }
     
     async fetchConfig() {
-        const response = await fetch('/api/config/');
+        const response = await this.fetchAuthenticatedEndpoint('/api/config/');
         return await response.json();
     }
 
     async fetchSystemConfig() {
-        const response = await fetch('/api/system');
+        const response = await this.fetchAuthenticatedEndpoint('/api/system');
         return await response.json();
     }
 
     async togglePlugin(category, plugin, enable) {
         const endpoint = enable ? 'enable' : 'disable';
-        await fetch(`/api/plugins/${endpoint}/`, {
+        await this.fetchAuthenticatedEndpoint(`/api/plugins/${endpoint}/`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({category, name: plugin})
@@ -218,7 +242,7 @@ class AdminPanel {
         for (const [key, value] of formData.entries()) {
             const payload = pathTransform(key, value);
             
-            await fetch(endpoint, {
+            await this.fetchAuthenticatedEndpoint(endpoint, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)

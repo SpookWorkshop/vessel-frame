@@ -205,3 +205,167 @@ button.secondary:hover {
     color: #fff;
   }
 }
+
+.auth-page, .admin-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top left, #e3f2ff, transparent 55%),
+              radial-gradient(circle at bottom right, #ffe6f2, transparent 55%),
+              #f6f7fb;
+}
+
+.auth-inner {
+  max-width: 420px;
+  width: 100%;
+}
+
+.auth-card {
+  padding: 2.25rem 2rem;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.auth-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0078d4, #00b4d8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.auth-subtitle {
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-group {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.form-inline {
+  margin-top: 0.25rem;
+}
+
+label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.space-between {
+  justify-content: space-between;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.auth-button {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.auth-button-alt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0.75rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e1e4ea;
+}
+
+.auth-footer {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.auth-link {
+  color: #0078d4;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+/* Small screens */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .auth-title {
+    font-size: 1.35rem;
+  }
+}
+
+/* Dark mode tweaks */
+@media (prefers-color-scheme: dark) {
+  .auth-page, .admin-page {
+    background:
+      radial-gradient(circle at top left, rgba(0,120,212,0.25), transparent 55%),
+      radial-gradient(circle at bottom right, rgba(255,99,132,0.2), transparent 55%),
+      #121212;
+  }
+
+  .auth-divider::before,
+  .auth-divider::after {
+    background: #333;
+  }
+
+  .checkbox-label {
+    color: #ccc;
+  }
+}

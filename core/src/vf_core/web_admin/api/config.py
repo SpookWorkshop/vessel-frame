@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import Any
 import logging
@@ -6,7 +6,7 @@ import logging
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
 from vf_core.plugin_types import GROUP_SCHEMAS
-from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager
+from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager, verify_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,7 +29,7 @@ class ConfigUpdateResponse(BaseModel):
 
 
 @router.get("/")
-async def get_full_config(cm: ConfigManager = Depends(get_config_manager)):
+async def get_full_config(user: dict = Depends(verify_token), cm: ConfigManager = Depends(get_config_manager)):
     """
     Return the entire config as a dictionary.
 
@@ -43,7 +43,7 @@ async def get_full_config(cm: ConfigManager = Depends(get_config_manager)):
 
 
 @router.get("/{path:path}", response_model=ConfigValueResponse)
-async def get_config_value(path: str, cm: ConfigManager = Depends(get_config_manager)):
+async def get_config_value(path: str, user: dict = Depends(verify_token), cm: ConfigManager = Depends(get_config_manager)):
     """
     Retrieve a specific config value by its path.
 
@@ -58,7 +58,7 @@ async def get_config_value(path: str, cm: ConfigManager = Depends(get_config_man
         HTTPException: If the specified path does not exist (404).
     """
     if not cm.has(path):
-        raise HTTPException(status_code=404, detail=f"Config path '{path}' not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Config path '{path}' not found")
 
     value = cm.get(path)
     return {"path": path, "value": value}
@@ -67,6 +67,7 @@ async def get_config_value(path: str, cm: ConfigManager = Depends(get_config_man
 @router.put("/", response_model=ConfigUpdateResponse)
 async def update_config(
     update: ConfigUpdate,
+    user: dict = Depends(verify_token), 
     cm: ConfigManager = Depends(get_config_manager),
     pm: PluginManager = Depends(get_plugin_manager),
 ):
@@ -90,14 +91,14 @@ async def update_config(
 
     # Validate path
     if not update.path or not update.path.strip():
-        raise HTTPException(status_code=400, detail="Config path cannot be empty")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Config path cannot be empty")
 
     if len(update.path) > 200:
-        raise HTTPException(status_code=400, detail="Config path too long")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Config path too long")
 
     if not _is_valid_config_path(update.path, pm):
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid config path '{update.path}'. Path must match a field in the plugin's schema.",
         )
 
@@ -106,7 +107,7 @@ async def update_config(
         cm.save()
         return {"success": True, "path": update.path, "value": update.value}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 def _is_valid_config_path(path: str, pm: PluginManager) -> bool:

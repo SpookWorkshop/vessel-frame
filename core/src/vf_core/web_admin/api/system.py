@@ -1,11 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import Any
 import logging
 
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
-from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager
+from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager, verify_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -28,7 +28,7 @@ class ConfigUpdateResponse(BaseModel):
 
 
 @router.get("/")
-async def get_config(cm: ConfigManager = Depends(get_config_manager)):
+async def get_config(user: dict = Depends(verify_token), cm: ConfigManager = Depends(get_config_manager)):
     """
     Return the system config as a dictionary.
 
@@ -44,6 +44,7 @@ async def get_config(cm: ConfigManager = Depends(get_config_manager)):
 @router.put("/", response_model=ConfigUpdateResponse)
 async def update_config(
     update: ConfigUpdate,
+    user: dict = Depends(verify_token), 
     cm: ConfigManager = Depends(get_config_manager),
     pm: PluginManager = Depends(get_plugin_manager),
 ):
@@ -64,14 +65,14 @@ async def update_config(
 
     # Validate key
     if not update.key or not update.key.strip():
-        raise HTTPException(status_code=400, detail="System config key cannot be empty")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="System config key cannot be empty")
 
     if len(update.key) > 40:
-        raise HTTPException(status_code=400, detail="System config key too long")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="System config key too long")
 
     try:
         cm.set(f"SYSTEM.{update.key}", update.value)
         cm.save()
         return {"success": True, "key": update.key, "value": update.value}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
