@@ -1,5 +1,5 @@
 from enum import Enum
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 
 from vf_core.plugin_manager import PluginManager
@@ -13,7 +13,7 @@ from vf_core.plugin_types import (
     GROUP_SCREENS,
     GROUP_SOURCES,
 )
-from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager
+from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager, verify_token
 
 
 class PluginCategory(str, Enum):
@@ -40,7 +40,7 @@ router = APIRouter()
 
 
 @router.get("/schemas")
-async def get_plugin_schemas(pm: PluginManager = Depends(get_plugin_manager)):
+async def get_plugin_schemas(user: dict = Depends(verify_token), pm: PluginManager = Depends(get_plugin_manager)):
     """Get configuration schemas for all plugins"""
     schemas = {}
 
@@ -58,7 +58,7 @@ async def get_plugin_schemas(pm: PluginManager = Depends(get_plugin_manager)):
 
 
 @router.get("/available")
-async def get_available_plugins(pm: PluginManager = Depends(get_plugin_manager)):
+async def get_available_plugins(user: dict = Depends(verify_token), pm: PluginManager = Depends(get_plugin_manager)):
     """Get list of all available plugins (discovered via entry points)."""
     available = {"sources": [], "processors": [], "renderer": [], "screens": []}
 
@@ -71,6 +71,7 @@ async def get_available_plugins(pm: PluginManager = Depends(get_plugin_manager))
 @router.put("/enable")
 async def enable_plugin(
     update: PluginUpdate,
+    user: dict = Depends(verify_token), 
     pm: PluginManager = Depends(get_plugin_manager),
     cm: ConfigManager = Depends(get_config_manager),
 ):
@@ -94,7 +95,7 @@ async def enable_plugin(
     available = pm.names(PLUGIN_GROUPS.get(category, ""))
     if update.name not in available:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Plugin '{update.name}' not found in category '{category}'",
         )
 

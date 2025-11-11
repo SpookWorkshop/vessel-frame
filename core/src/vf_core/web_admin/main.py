@@ -5,7 +5,8 @@ from pathlib import Path
 import uvicorn
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
-from vf_core.web_admin.api import system
+from vf_core.web_admin.api import auth, system
+from vf_core.web_admin.auth import get_or_create_secret_key
 
 from .api import config, plugins
 
@@ -22,6 +23,7 @@ Run via:
 app = FastAPI(title="Vessel Frame Admin Panel")
 
 # Mount API routes
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(plugins.router, prefix="/api/plugins", tags=["plugins"])
 app.include_router(system.router, prefix="/api/system", tags=["system"])
@@ -55,8 +57,11 @@ async def start_admin_server(
         host (str, optional): Host address to bind. Defaults to "127.0.0.1".
         port (int, optional): TCP port to listen on. Defaults to 8000.
     """
+    secret_key = get_or_create_secret_key()
+
     app.state.config_manager = config_manager
     app.state.plugin_manager = plugin_manager
+    app.state.secret_key = secret_key
 
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)

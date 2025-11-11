@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Vessel Frame Admin Panel</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="auth-page">
+        <div class="auth-inner card auth-card">
+            <div class="auth-brand">
+                <div>
+                    <h1 class="auth-title">Vessel Frame Admin Auth</h1>
+                    <p class="auth-subtitle text-muted">Authenticate to access the dashboard</p>
+                </div>
+            </div>
+
+            <form class="auth-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="you" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="flex space-between">
+                        <span>Password</span>
+                    </label>
+                    <input type="password" id="password" name="password" placeholder="*********" required />
+                </div>
+
+                <button type="submit" class="primary auth-button" id="auth-button">
+                    Sign in
+                </button>
+            </form>
+        </div>
+    </div>
+<script>
+    async function register(uname, pwd){
+        const registerResult = await fetch('/api/auth/setup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: uname, password: pwd})
+        });
+        const response = await registerResult.json();
+        login(uname, pwd);
+    }
+    async function login(uname, pwd){
+        const authResult = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: uname, password: pwd})
+        });
+        const response = await authResult.json();
+        
+        if(response.token){
+            localStorage.setItem('atoken', response.token);
+            window.location = '/';
+        }
+    }
+
+    async function setupAuthButton(){
+        const setupResult = await fetch('/api/auth/status');
+        const response = await setupResult.json();
+        console.log('auth status ', response);
+
+        const authButton = document.getElementById('auth-button');
+        const nameInput = document.getElementById('username');
+        const pwdInput = document.getElementById('password');
+
+        if(response.configured){
+            authButton.textContent = "Authenticate";
+            authButton.onclick = (e) => {
+                e.preventDefault();
+                login(nameInput.value, pwdInput.value);
+            }
+        } else {
+            authButton.textContent = "Register";
+            authButton.onclick = (e) => {
+                e.preventDefault();
+                register(nameInput.value, pwdInput.value);
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setupAuthButton();
+    });
+</script>
+</body>
+
+</html>
