@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "i2c-message-source"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = ["smbus2>=0.5.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.entry-points."vesselframe.plugins.messagesource"]
+i2c_message_source = "i2c_message_source:make_plugin"
+
+[project.entry-points."vesselframe.config.schemas"]
+i2c_message_source = "i2c_message_source:get_config_schema"
