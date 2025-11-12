@@ -68,7 +68,7 @@ source .venv/bin/activate
 ### Install vf_core & plugins
 ```bash
 pip install ./core
-pip install ./plugins/message_sources/i2c_message_source
+pip install ./plugins/message_sources/daisy_message_source
 pip install ./plugins/message_processors/ais_decoder_processor
 pip install ./plugins/renderers/inky_renderer
 pip install ./plugins/screens/table_screen
@@ -78,7 +78,17 @@ pip install ./plugins/screens/table_screen
 ```bash
 vf
 ```
-You should see some log output.
+You should see some log output similar to the following:
+```
+[INFO] vf_core.web_admin.auth: Generated new JWT secret key
+INFO:     Started server process [1114]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[WARNING] vf_core.main: No sources started
+[WARNING] vf_core.main: No renderer created
+[INFO] vf_core.main: System running. Press Ctrl+C to stop.
+```
 
 ### Enable Plugins
 In a browser on any other device, navigate to http://[YOUR_PI_IP_ADDR]:8000. You should see the admin panel.
