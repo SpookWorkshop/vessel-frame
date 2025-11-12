@@ -56,7 +56,13 @@ class InkyRenderer(RendererPlugin):
 
     def flush(self) -> None:
         """Save the current canvas to the configured output path."""
-        self._display.set_image(self._canvas)
+        image = self._canvas
+        
+        # Inky expects landscape so rotate if we're in portrait
+        if self._orientation == "portrait":
+            image = image.rotate(90, expand=True)
+
+        self._display.set_image(image)
         self._display.show()
 
     def clear(self) -> None:
