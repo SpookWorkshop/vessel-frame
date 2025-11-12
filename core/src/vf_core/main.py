@@ -178,7 +178,7 @@ async def run(argv: list[str] | None = None) -> int:
         logger.exception(f"Failed to load config from {args.config}")
         return 1
 
-    admin_task = asyncio.create_task(start_admin_server(config_manager, pm))
+    admin_task = asyncio.create_task(start_admin_server(config_manager, pm, host="0.0.0.0"))
     admin_task.add_done_callback(
         partial(_log_admin_status, stop_event=stop_event, logger=logger)
     )
