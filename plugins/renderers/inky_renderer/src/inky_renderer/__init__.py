@@ -14,6 +14,8 @@ from inky.auto import auto
 class InkyRenderer(RendererPlugin):
     """Renderer plugin that draws a Pillow canvas to an Inky screen."""
 
+    MIN_RENDER_INTERVAL: int = 60
+
     def __init__(
         self,
         *,
