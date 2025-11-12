@@ -59,6 +59,10 @@ def _log_admin_status(
     Logs a warning when the task stops cleanly but unexpectedly and logs an
     exception on crash.
     """
+    if task.cancelled():
+        # Manual shutdown - nothing to report
+        return
+    
     try:
         task.result()
         logger.warning("Admin server stopped unexpectedly but cleanly")
