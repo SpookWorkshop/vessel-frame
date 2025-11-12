@@ -11,5 +11,8 @@ dependencies = ["toml>=0.10.2","tomli-w>=1.2.0","aiosqlite>=0.21.0","fastapi>=0.
 [project.scripts]
 vf = "vf_core.main:main"
 
+[tool.setuptools.package-data]
+vf_core = ["web_admin/static/**/*"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
