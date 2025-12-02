@@ -31,10 +31,10 @@ class InkyRenderer(RendererPlugin):
 
         try:
             self._fonts = {
-                "xsmall": ImageFont.truetype(font_path, 8),
-                "small": ImageFont.truetype(font_path, 14),
-                "medium": ImageFont.truetype(font_path, 20),
-                "large": ImageFont.truetype(font_path, 35),
+                "xsmall": self._load_font(font_path, 8, "SemiBold"),
+                "small": self._load_font(font_path, 14, "SemiBold"),
+                "medium": self._load_font(font_path, 20, "SemiBold"),
+                "large": self._load_font(font_path, 35, "Bold"),
             }
         except Exception as e:
             raise RuntimeError(f"Failed to load fonts from {font_path}: {e}") from e
@@ -53,6 +53,12 @@ class InkyRenderer(RendererPlugin):
             self._height = int(height)
 
         self._canvas: Image.Image = Image.new("RGB", (self._width, self._height))
+
+    def _load_font(self, font_path: str, size: int, weight_name: str = "Regular") -> ImageFont.FreeTypeFont:
+        """Load a font with specified size and weight."""
+        font = ImageFont.truetype(font_path, size)
+        font.set_variation_by_name(weight_name)
+        return font
 
     def flush(self) -> None:
         """Save the current canvas to the configured output path."""
