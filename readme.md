@@ -11,7 +11,7 @@ A desktop picture frame that can receive AIS messages from nearby ships and disp
 ### Hardware Compatibility
 This project has been tested with the following hardware setup:
  - Raspberry Pi Zero 2W
- - Raspberry Pi OS Headless Bookworm
+ - Raspberry Pi OS Headless Bookworm or Trixie
  - [Wegmatt Daisy Mini](https://shop.wegmatt.com/products/daisy-mini-ais-receiver)
  - [Pimoroni Inky Impression 7](https://shop.pimoroni.com/products/inky-impression-7-3?variant=55186435244411) (Gallery and Spectra 6 models both supported)
 
@@ -29,7 +29,12 @@ SSH into the Pi so you can set it up.
 First install the required dependencies:
 ```bash
 sudo apt update
-sudo apt install git python3.11-dev
+sudo apt install git
+
+#if using Trixie
+sudo apt install python3.13-dev
+#if using Bookworm
+sudo apt install python3.11-dev
 ```
 
 Next, enable I2C and SPI in raspi-config:
@@ -43,7 +48,7 @@ Next edit the boot config:
 ```bash
 sudo nano /boot/firmware/config.txt
 ```
-At the end of the file, under "[all]", add "add dtoverlay=spi0-0cs".
+At the end of the file, under "[all]", add "dtoverlay=spi0-0cs".
 
 Now reboot the Pi and SSH back in.
 
