@@ -13,6 +13,7 @@ from .plugin_types import (
     GROUP_PROCESSORS,
     GROUP_RENDERER,
     GROUP_SOURCES,
+    GROUP_CONTROLLERS,
     Plugin,
     RendererPlugin,
 )
@@ -200,6 +201,9 @@ async def run(argv: list[str] | None = None) -> int:
     processors = await _init_plugins(
         config_manager, pm, bus, "processors", GROUP_PROCESSORS, logger
     )
+    controllers = await _init_plugins(
+        config_manager, pm, bus, "controllers", GROUP_CONTROLLERS, logger
+    )
 
     if not sources:
         logger.warning("No sources started")
@@ -259,6 +263,12 @@ async def run(argv: list[str] | None = None) -> int:
                 await processor.stop()
             except Exception as e:
                 logger.exception("Error stopping processor")
+
+        for processor in controllers:
+            try:
+                await processor.stop()
+            except Exception as e:
+                logger.exception("Error stopping controller")
 
         await sm.stop()
         await bus.shutdown()

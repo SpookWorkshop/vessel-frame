@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 # Plugins register themselves in pyproject.toml under these groups
 GROUP_SOURCES = "vesselframe.plugins.messagesource"
 GROUP_PROCESSORS = "vesselframe.plugins.messageprocessors"
+GROUP_CONTROLLERS = "vesselframe.plugins.controllers"
 GROUP_RENDERER = "vesselframe.plugins.renderer"
 GROUP_SCREENS = "vesselframe.plugins.screens"
 GROUP_SCHEMAS = "vesselframe.config.schemas"
