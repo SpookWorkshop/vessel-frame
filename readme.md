@@ -62,7 +62,7 @@ cd vessel-frame
 The project must run in a python virtual environment
 ```bash
 # Create the virtual env
-python -m venv .venv
+python -m venv .venv --system-site-packages
 
 # Activate venv (Linux)
 source .venv/bin/activate
@@ -77,6 +77,7 @@ pip install ./plugins/message_sources/daisy_message_source
 pip install ./plugins/message_processors/ais_decoder_processor
 pip install ./plugins/renderers/inky_renderer
 pip install ./plugins/screens/table_screen
+pip install ./plugins/controllers/button_controller
 ```
 
 ### Run the project

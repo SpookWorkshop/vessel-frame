@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "button-controller"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies=["gpiozero>=2.0","lgpio>=0.2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.entry-points."vesselframe.plugins.controllers"]
+button_controller = "button_controller:make_plugin"
