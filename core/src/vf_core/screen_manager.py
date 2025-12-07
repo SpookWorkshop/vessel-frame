@@ -80,7 +80,7 @@ class ScreenManager:
     
     async def _next_screen(self):
         """Switch to next screen."""
-        if not self._screens:
+        if not self._screens or len(self._screens) <= 1:
             return
         
         next_index = (self._current_screen_index + 1) % len(self._screens)
@@ -88,7 +88,7 @@ class ScreenManager:
     
     async def _previous_screen(self):
         """Switch to previous screen."""
-        if not self._screens:
+        if not self._screens or len(self._screens) <= 1:
             return
         
         next_index = (self._current_screen_index - 1) % len(self._screens)
