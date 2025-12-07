@@ -51,7 +51,7 @@ class RendererPlugin(Protocol):
         """Clear the canvas to background color."""
         ...
 
-    def flush(self) -> None:
+    async def flush(self) -> None:
         """Output the current canvas (save to file, update display, etc)."""
         ...
 

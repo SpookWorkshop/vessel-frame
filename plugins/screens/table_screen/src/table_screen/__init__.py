@@ -106,7 +106,7 @@ class TableScreen(ScreenPlugin):
 
         self._draw_table(draw, fonts, vessels, text_x, text_y, width)
 
-        self._renderer.flush()
+        await self._renderer.flush()
 
     def _draw_container(
         self, draw: ImageDraw.ImageDraw, width: int, height: int

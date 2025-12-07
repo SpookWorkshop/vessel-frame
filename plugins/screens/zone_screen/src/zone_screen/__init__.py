@@ -126,7 +126,7 @@ class ZoneScreen(ScreenPlugin):
         text_y = self._draw_vessel_name(draw, fonts, text_x, text_y, width, vessel)
         text_y = self._draw_vessel_info(draw, fonts, text_x, text_y, width, vessel)
 
-        self._renderer.flush()
+        await self._renderer.flush()
 
     def _draw_container(
         self, draw: ImageDraw.ImageDraw, width: int, height: int
