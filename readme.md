@@ -11,7 +11,7 @@ A desktop picture frame that can receive AIS messages from nearby ships and disp
 ### Hardware Compatibility
 This project has been tested with the following hardware setup:
  - Raspberry Pi Zero 2W
- - Raspberry Pi OS Headless Bookworm
+ - Raspberry Pi OS Headless Trixie
  - [Wegmatt Daisy Mini](https://shop.wegmatt.com/products/daisy-mini-ais-receiver)
  - [Pimoroni Inky Impression 7](https://shop.pimoroni.com/products/inky-impression-7-3?variant=55186435244411) (Gallery and Spectra 6 models both supported)
 
@@ -29,21 +29,28 @@ SSH into the Pi so you can set it up.
 First install the required dependencies:
 ```bash
 sudo apt update
-sudo apt install git python3.11-dev
+sudo apt install git python3.13-dev
 ```
 
 Next, enable I2C and SPI in raspi-config:
 ```bash
 sudo raspi-config
 ```
-To enable I2C: Choose "Interface Options" > I2C > Enable.
-To enable SPI: Choose "Interface Options" > SPI > Enable.
+
+Enable I2C and SPI:
+```
+To enable I2C:
+Choose "Interface Options" > I2C > Enable.
+
+To enable SPI:
+Choose "Interface Options" > SPI > Enable.
+```
 
 Next edit the boot config:
 ```bash
 sudo nano /boot/firmware/config.txt
 ```
-At the end of the file, under "[all]", add "add dtoverlay=spi0-0cs".
+At the end of the file, under "[all]", add "dtoverlay=spi0-0cs".
 
 Now reboot the Pi and SSH back in.
 
@@ -57,7 +64,7 @@ cd vessel-frame
 The project must run in a python virtual environment
 ```bash
 # Create the virtual env
-python -m venv .venv
+python -m venv .venv --system-site-packages
 
 # Activate venv (Linux)
 source .venv/bin/activate
@@ -72,6 +79,8 @@ pip install ./plugins/message_sources/daisy_message_source
 pip install ./plugins/message_processors/ais_decoder_processor
 pip install ./plugins/renderers/inky_renderer
 pip install ./plugins/screens/table_screen
+pip install ./plugins/screens/zone_screen
+pip install ./plugins/controllers/button_controller
 ```
 
 ### Run the project

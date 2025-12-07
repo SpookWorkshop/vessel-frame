@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import Any
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from vf_core.plugin_types import (
     ConfigField,
     ConfigFieldType,
@@ -23,6 +25,8 @@ class InkyRenderer(RendererPlugin):
         height: int = 800,
         orientation: str = "portrait",
     ) -> None:
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inky-display")
+
         plugin_dir = Path(__file__).parent
         font_path = plugin_dir / "fonts" / "Inter" / "Inter-VariableFont_opsz,wght.ttf"
 
@@ -60,7 +64,18 @@ class InkyRenderer(RendererPlugin):
         font.set_variation_by_name(weight_name)
         return font
 
-    def flush(self) -> None:
+    def _flush_block(self, image: Image.image) -> None:
+        """Blocking flush operation."""
+        try:
+            self._display.set_image(image)
+            # Inky docs say passing false prevents blocking but it doesn't
+            # appear that all of their drivers implement it
+            self._display.show(False)
+        except Exception as e:
+            self._logger.error(f"Error updating display: {e}")
+            raise
+
+    async def flush(self) -> None:
         """Save the current canvas to the configured output path."""
         image = self._canvas
         
@@ -68,8 +83,10 @@ class InkyRenderer(RendererPlugin):
         if self._orientation == "portrait":
             image = image.rotate(90, expand=True)
 
-        self._display.set_image(image)
-        self._display.show()
+        # Run in thread as it's a blocking call
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(self._executor, self._flush_block, image)
+        
 
     def clear(self) -> None:
         """Clear the canvas by filling it with the background colour."""

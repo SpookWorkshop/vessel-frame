@@ -12,6 +12,7 @@ from vf_core.plugin_types import (
     GROUP_SCHEMAS,
     GROUP_SCREENS,
     GROUP_SOURCES,
+    GROUP_CONTROLLERS
 )
 from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager, verify_token
 
@@ -21,6 +22,7 @@ class PluginCategory(str, Enum):
     PROCESSORS = "processors"
     RENDERER = "renderer"
     SCREENS = "screens"
+    CONTROLLERS = "controllers"
 
 
 class PluginUpdate(BaseModel):
@@ -35,6 +37,7 @@ PLUGIN_GROUPS = {
     "processors": GROUP_PROCESSORS,
     "renderer": GROUP_RENDERER,
     "screens": GROUP_SCREENS,
+    "controllers": GROUP_CONTROLLERS,
 }
 router = APIRouter()
 
@@ -60,7 +63,7 @@ async def get_plugin_schemas(user: dict = Depends(verify_token), pm: PluginManag
 @router.get("/available")
 async def get_available_plugins(user: dict = Depends(verify_token), pm: PluginManager = Depends(get_plugin_manager)):
     """Get list of all available plugins (discovered via entry points)."""
-    available = {"sources": [], "processors": [], "renderer": [], "screens": []}
+    available = {"sources": [], "processors": [], "renderer": [], "screens": [], "controllers": []}
 
     for category, group in PLUGIN_GROUPS.items():
         available[category] = pm.names(group)

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from vf_core.config_manager import ConfigManager
@@ -24,6 +25,7 @@ class ScreenManager:
         self._vm = vm
         self._cm = cm
         self._active_screen: ScreenPlugin | None = None
+        self._current_screen_index: int = 0
 
     async def start(self) -> None:
         """
@@ -47,8 +49,10 @@ class ScreenManager:
             )
             self._screens.append(screen)
 
+        asyncio.create_task(self._loop())
+
         if self._screens:
-            self._active_screen = self._screens[0]
+            self._active_screen = self._screens[self._current_screen_index]
             await self._active_screen.activate()
         else:
             self._logger.warning("No screens loaded")
@@ -63,3 +67,41 @@ class ScreenManager:
                 await self._active_screen.deactivate()
             except Exception:
                 self._logger.exception("Error deactivating screen")
+
+    async def _loop(self) -> None:
+        """Listen for screen navigation commands."""
+        async for message in self._bus.subscribe("screen.command"):
+            action = message.get("action")
+            
+            if action == "next":
+                await self._next_screen()
+            elif action == "previous":
+                await self._previous_screen()
+    
+    async def _next_screen(self):
+        """Switch to next screen."""
+        if not self._screens or len(self._screens) <= 1:
+            return
+        
+        next_index = (self._current_screen_index + 1) % len(self._screens)
+        await self._switch_to_screen(next_index)
+    
+    async def _previous_screen(self):
+        """Switch to previous screen."""
+        if not self._screens or len(self._screens) <= 1:
+            return
+        
+        next_index = (self._current_screen_index - 1) % len(self._screens)
+        await self._switch_to_screen(next_index)
+
+    async def _switch_to_screen(self, target_index: int):
+        """Switch to a specific screen"""
+        
+        self._logger.info(
+            f"Switching from screen {self._current_screen_index} to {target_index}"
+        )
+        
+        # Change the active screen
+        await self._screens[self._current_screen_index].deactivate()
+        self._current_screen_index = target_index
+        await self._screens[self._current_screen_index].activate()

@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 # Plugins register themselves in pyproject.toml under these groups
 GROUP_SOURCES = "vesselframe.plugins.messagesource"
 GROUP_PROCESSORS = "vesselframe.plugins.messageprocessors"
+GROUP_CONTROLLERS = "vesselframe.plugins.controllers"
 GROUP_RENDERER = "vesselframe.plugins.renderer"
 GROUP_SCREENS = "vesselframe.plugins.screens"
 GROUP_SCHEMAS = "vesselframe.config.schemas"
@@ -50,7 +51,7 @@ class RendererPlugin(Protocol):
         """Clear the canvas to background color."""
         ...
 
-    def flush(self) -> None:
+    async def flush(self) -> None:
         """Output the current canvas (save to file, update display, etc)."""
         ...
 

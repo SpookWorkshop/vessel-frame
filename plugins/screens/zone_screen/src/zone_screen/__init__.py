@@ -43,10 +43,10 @@ class ZoneScreen(ScreenPlugin):
         vm: VesselManager,
         in_topic: str = "vessel.zone_entered",
         update_interval: float = 10.0,
-        zone_name: str,
-        zone_lat: float,
-        zone_lon: float,
-        zone_rad: float
+        zone_name: str = "Unknown",
+        zone_lat: float = 0.0,
+        zone_lon: float = 0.0,
+        zone_rad: float = 0.0
     ) -> None:
         self._logger = logging.getLogger(__name__)
 
@@ -61,7 +61,10 @@ class ZoneScreen(ScreenPlugin):
             self._render, renderer.MIN_RENDER_INTERVAL + update_interval
         )
 
-        self._vessel_manager.register_zone(zone_name, zone_lat, zone_lon, zone_rad)
+        lat = float(zone_lat) if isinstance(zone_lat, str) else zone_lat
+        lon = float(zone_lon) if isinstance(zone_lon, str) else zone_lon
+        rad = float(zone_rad) if isinstance(zone_rad, str) else zone_rad
+        self._vessel_manager.register_zone(zone_name, lat, lon, rad)
 
     async def activate(self) -> None:
         """Start listening for zone events and enable periodic rendering."""
@@ -74,7 +77,8 @@ class ZoneScreen(ScreenPlugin):
     async def deactivate(self) -> None:
         """Stop listening and cancel background work."""
         if self._task and not self._task.done():
-            self._render_strategy.stop()
+            await self._render_strategy.stop()
+            
             self._task.cancel()
             with suppress(asyncio.CancelledError):
                 await self._task
@@ -122,7 +126,7 @@ class ZoneScreen(ScreenPlugin):
         text_y = self._draw_vessel_name(draw, fonts, text_x, text_y, width, vessel)
         text_y = self._draw_vessel_info(draw, fonts, text_x, text_y, width, vessel)
 
-        self._renderer.flush()
+        await self._renderer.flush()
 
     def _draw_container(
         self, draw: ImageDraw.ImageDraw, width: int, height: int
