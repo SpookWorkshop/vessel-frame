@@ -20,13 +20,28 @@ class AdminPanel {
         this.showSystemSettings();
     }
 
+    showAlert(message, type = 'info') {
+        const container = document.getElementById('alertContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        container.appendChild(alert);
+        
+        setTimeout(() => alert.remove(), 5000);
+    }
+
     async loadAllData() {
-        [this.systemConfig, this.pluginList, this.schemas, this.currentConfig] = await Promise.all([
-            this.fetchSystemConfig(),
-            this.fetchAvailablePlugins(),
-            this.fetchPluginSchemas(),
-            this.fetchConfig()
-        ]);
+        try {
+            [this.systemConfig, this.pluginList, this.schemas, this.currentConfig] = await Promise.all([
+                this.fetchSystemConfig(),
+                this.fetchAvailablePlugins(),
+                this.fetchPluginSchemas(),
+                this.fetchConfig()
+            ]);
+        } catch (error) {
+            console.error('Error loading data:', error);
+            this.showAlert('Failed to load configuration data', 'error');
+        }
     }
 
     async fetchAuthenticatedEndpoint(endpoint, options = {headers:{}}){
@@ -68,17 +83,22 @@ class AdminPanel {
     }
 
     async togglePlugin(category, plugin, enable) {
-        const endpoint = enable ? 'enable' : 'disable';
-        await this.fetchAuthenticatedEndpoint(`/api/plugins/${endpoint}/`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({category, name: plugin})
-        });
+        try {
+            const endpoint = enable ? 'enable' : 'disable';
+            await this.fetchAuthenticatedEndpoint(`/api/plugins/${endpoint}/`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({category, name: plugin})
+            });
 
-        await this.loadAllData();
-        this.renderPluginList();
-        
-        alert(`Plugin ${enable ? 'Enabled' : 'Disabled'}! Restart may be required.`);
+            await this.loadAllData();
+            this.renderPluginList();
+            
+            this.showAlert(`Plugin ${enable ? 'enabled' : 'disabled'} successfully! Restart may be required.`, 'success');
+        } catch (error) {
+            console.error('Error toggling plugin:', error);
+            this.showAlert(`Failed to ${enable ? 'enable' : 'disable'} plugin: ${error.message}`, 'error');
+        }
     }
 
     async enablePlugin(category, plugin) {
@@ -109,10 +129,20 @@ class AdminPanel {
         const card = document.createElement('div');
         card.className = 'card';
         
+        const badge = isEnabled 
+            ? '<span class="badge badge-enabled">Enabled</span>' 
+            : '<span class="badge badge-disabled">Disabled</span>';
+        
         card.innerHTML = `
-            <div class="flex" style="justify-content: space-between;">
-                <h2>${plugin}</h2>
-                <button>${isEnabled ? 'Disable' : 'Enable'}</button>
+            <div class="card-header">
+                <div>
+                    <h2>${plugin}</h2>
+                    <p class="text-muted" style="margin-top: 5px;">Category: ${category}</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    ${badge}
+                    <button class="btn-small">${isEnabled ? 'Disable' : 'Enable'}</button>
+                </div>
             </div>
             <div class="plugin-config"></div>
         `;
@@ -136,6 +166,10 @@ class AdminPanel {
     showConfigForm(container, schema, configKey, saveCallback) {
         container.innerHTML = '';
 
+        if (!schema.fields || schema.fields.length === 0) {
+            return;
+        }
+
         const form = document.createElement('form');
         
         for (const field of schema.fields) {
@@ -145,7 +179,7 @@ class AdminPanel {
         }
         
         const saveBtn = document.createElement('button');
-        saveBtn.textContent = 'Save';
+        saveBtn.textContent = 'Save Configuration';
         saveBtn.type = 'submit';
         saveBtn.onclick = (e) => {
             e.preventDefault();
@@ -165,7 +199,7 @@ class AdminPanel {
     
     createFormField(field, currentValue) {
         const div = document.createElement('div');
-        div.className = 'form-field';
+        div.className = 'form-group';
         
         const label = document.createElement('label');
         label.textContent = field.label;
@@ -178,7 +212,8 @@ class AdminPanel {
         div.appendChild(input);
         
         if (field.description) {
-            const desc = document.createElement('small');
+            const desc = document.createElement('p');
+            desc.className = 'help-text';
             desc.textContent = field.description;
             div.appendChild(desc);
         }
@@ -239,17 +274,22 @@ class AdminPanel {
     }
     
     async saveConfig(endpoint, formData, pathTransform) {
-        for (const [key, value] of formData.entries()) {
-            const payload = pathTransform(key, value);
+        try {
+            for (const [key, value] of formData.entries()) {
+                const payload = pathTransform(key, value);
+                
+                await this.fetchAuthenticatedEndpoint(endpoint, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+            }
             
-            await this.fetchAuthenticatedEndpoint(endpoint, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
+            this.showAlert('Configuration saved successfully! Restart may be required.', 'success');
+        } catch (error) {
+            console.error('Error saving config:', error);
+            this.showAlert('Failed to save configuration: ' + error.message, 'error');
         }
-        
-        alert('Configuration saved! Restart may be required.');
     }
 
     async savePluginConfig(pluginName, form) {
@@ -295,13 +335,11 @@ class AdminPanel {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <div class="flex" style="justify-content: space-between;">
-                <h2>System</h2>
-            </div>
-            <div class="system-config"></div>
+            <h2>System Configuration</h2>
+            <div class="plugin-config"></div>
         `;
 
-        const container = card.querySelector('.system-config');
+        const container = card.querySelector('.plugin-config');
         if (schema && container) {
             this.showConfigForm(container, schema, 'System', this.saveSystemConfig.bind(this));
         }

@@ -5,10 +5,11 @@ from pathlib import Path
 import uvicorn
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
+from vf_core.network_manager import NetworkManager
 from vf_core.web_admin.api import auth, system
 from vf_core.web_admin.auth import get_or_create_secret_key
 
-from .api import config, plugins
+from .api import config, plugins, network
 
 """Vessel Frame Admin server.
 
@@ -27,6 +28,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
 app.include_router(plugins.router, prefix="/api/plugins", tags=["plugins"])
 app.include_router(system.router, prefix="/api/system", tags=["system"])
+app.include_router(network.router, prefix="/api/network", tags=["network"])
 
 # Serve static files
 static_dir = Path(__file__).parent / "static"
@@ -42,6 +44,7 @@ async def root():
 async def start_admin_server(
     config_manager: ConfigManager,
     plugin_manager: PluginManager,
+    network_manager: NetworkManager,
     host: str = "127.0.0.1",
     port: int = 8000,
 ) -> None:
@@ -61,6 +64,7 @@ async def start_admin_server(
 
     app.state.config_manager = config_manager
     app.state.plugin_manager = plugin_manager
+    app.state.network_manager = network_manager
     app.state.secret_key = secret_key
 
     config = uvicorn.Config(app, host=host, port=port, log_level="info")

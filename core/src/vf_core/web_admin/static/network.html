@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Settings - Vessel Frame</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Network Settings</h1>
+            <p>Manage your Vessel Frame's network connection</p>
+        </header>
+        
+        <div class="content">
+            <div id="alertContainer"></div>
+            
+            <div class="status-card" id="statusCard">
+                <h3 style="margin-bottom: 15px;">Current Status</h3>
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading status...</p>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>Access Point Mode</h2>
+                <p class="help-text" style="margin-bottom: 20px;">
+                    Create your own wifi network. Other devices can connect to this network to access the admin panel.
+                </p>
+                
+                <div class="form-group">
+                    <label for="apSsid">Network Name (SSID)</label>
+                    <input type="text" id="apSsid" placeholder="vessel-frame" maxlength="32">
+                </div>
+                
+                <div class="form-group">
+                    <label for="apPassword">Password</label>
+                    <input type="password" id="apPassword" placeholder="Enter password (min 8 characters)" maxlength="63">
+                    <p class="help-text">Minimum 8 characters required</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apChannel">Wifi Channel</label>
+                    <select id="apChannel">
+                        <option value="1">Channel 1 (2.412 GHz)</option>
+                        <option value="6" selected>Channel 6 (2.437 GHz)</option>
+                        <option value="11">Channel 11 (2.462 GHz)</option>
+                    </select>
+                </div>
+                
+                <button onclick="setAPMode()">Switch to Access Point Mode</button>
+            </div>
+            
+            <div class="section">
+                <h2>Client Mode</h2>
+                <p class="help-text" style="margin-bottom: 20px;">
+                    Connect to an existing wifi network.
+                </p>
+                
+                <button onclick="scanNetworks()" id="scanBtn">Scan for Networks</button>
+                
+                <div id="networkListContainer" class="hidden">
+                    <div class="network-list" id="networkList"></div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label for="clientSsid">Network Name</label>
+                        <input type="text" id="clientSsid" placeholder="Select a network or enter manually" maxlength="32">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="clientPassword">Password</label>
+                        <input type="password" id="clientPassword" placeholder="Enter network password" maxlength="63">
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoFallback" checked>
+                        <label for="autoFallback">Automatically fall back to AP mode if connection fails</label>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="fallbackTimeout">Connection Timeout (seconds)</label>
+                        <input type="number" id="fallbackTimeout" value="60" min="30" max="300">
+                        <p class="help-text">Time to wait before falling back to AP mode</p>
+                    </div>
+                </div>
+                
+                <button onclick="setClientMode()" style="margin-top: 20px;">Switch to Client Mode</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let selectedNetwork = null;
+        
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            
+            setTimeout(() => alert.remove(), 5000);
+        }
+        
+        async function refreshStatus() {
+            try {
+                const response = await fetch('/api/network/status');
+                const data = await response.json();
+                
+                const status = data;
+                const statusCard = document.getElementById('statusCard');
+                
+                let modeClass = 'mode-off';
+                let modeText = status.actual_mode;
+                
+                if (status.actual_mode === 'ap') {
+                    modeClass = 'mode-ap';
+                    modeText = 'Access Point';
+                } else if (status.actual_mode === 'client') {
+                    modeClass = 'mode-client';
+                    modeText = 'Client';
+                }
+                
+                let html = '<h3 style="margin-bottom: 15px;">Current Status</h3>';
+                html += '<div class="status-item">';
+                html += '<span class="status-label">Mode</span>';
+                html += `<span class="mode-badge ${modeClass}">${modeText}</span>`;
+                html += '</div>';
+                
+                if (status.actual_mode === 'ap') {
+                    html += '<div class="status-item">';
+                    html += '<span class="status-label">Network Name</span>';
+                    html += `<span class="status-value">${status.ap_ssid || 'N/A'}</span>`;
+                    html += '</div>';
+                    html += '<div class="status-item">';
+                    html += '<span class="status-label">IP Address</span>';
+                    html += `<span class="status-value">${status.ap_ip || 'N/A'}</span>`;
+                    html += '</div>';
+                } else if (status.actual_mode === 'client') {
+                    html += '<div class="status-item">';
+                    html += '<span class="status-label">Connected to</span>';
+                    html += `<span class="status-value">${status.connected_ssid || 'N/A'}</span>`;
+                    html += '</div>';
+                    html += '<div class="status-item">';
+                    html += '<span class="status-label">IP Address</span>';
+                    html += `<span class="status-value">${status.ip_address || 'N/A'}</span>`;
+                    html += '</div>';
+                }
+                
+                statusCard.innerHTML = html;
+            } catch (error) {
+                console.error('Error fetching status:', error);
+                showAlert('Failed to load status: ' + error.message, 'error');
+            }
+        }
+        
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/network/config');
+                const config = await response.json();
+                
+                document.getElementById('apSsid').value = config.ap_ssid || '';
+                document.getElementById('apChannel').value = config.ap_channel || 6;
+                document.getElementById('autoFallback').checked = config.auto_fallback !== false;
+                document.getElementById('fallbackTimeout').value = config.fallback_timeout || 60;
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+        
+        async function scanNetworks() {
+            const btn = document.getElementById('scanBtn');
+            const container = document.getElementById('networkListContainer');
+            const list = document.getElementById('networkList');
+            
+            btn.disabled = true;
+            btn.textContent = 'Scanning...';
+            container.classList.remove('hidden');
+            list.innerHTML = '<div class="loading"><div class="spinner"></div><p>Scanning...</p></div>';
+            
+            try {
+                const response = await fetch('/api/network/scan');
+                const networks = await response.json();
+                
+                if (networks.length === 0) {
+                    list.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No networks found</div>';
+                } else {
+                    list.innerHTML = '';
+                    networks.forEach(network => {
+                        const item = createNetworkItem(network);
+                        list.appendChild(item);
+                    });
+                }
+                
+                showAlert(`Found ${networks.length} network(s)`, 'success');
+            } catch (error) {
+                console.error('Error scanning:', error);
+                showAlert('Failed to scan networks: ' + error.message, 'error');
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc2626;">Scan failed</div>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Scan for Networks';
+            }
+        }
+        
+        function createNetworkItem(network) {
+            const item = document.createElement('div');
+            item.className = 'network-item';
+            item.onclick = () => selectNetwork(network, item);
+            
+            item.innerHTML = `
+                <div class="network-name">${network.ssid}</div>
+                <div class="network-info">
+                    <span>${network.quality || 'N/A'}</span>
+                    ${network.encrypted ? '<span>Secured</span>' : '<span>Open</span>'}
+                </div>
+            `;
+            
+            return item;
+        }
+        
+        function selectNetwork(network, element) {
+            document.querySelectorAll('.network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            selectedNetwork = network;
+            document.getElementById('clientSsid').value = network.ssid;
+            document.getElementById('clientPassword').focus();
+        }
+        
+        async function setAPMode() {
+            const ssid = document.getElementById('apSsid').value.trim();
+            const password = document.getElementById('apPassword').value;
+            const channel = parseInt(document.getElementById('apChannel').value);
+            
+            if (!ssid) {
+                showAlert('Please enter a network name', 'warning');
+                return;
+            }
+            
+            if (password && password.length < 8) {
+                showAlert('Password must be at least 8 characters', 'warning');
+                return;
+            }
+            
+            if (!confirm('Switch to Access Point mode? This will require a reboot. Your current connection will be lost.')) {
+                return;
+            }
+            
+            try {
+                const body = {};
+                if (ssid) body.ssid = ssid;
+                if (password) body.password = password;
+                if (channel) body.channel = channel;
+                
+                const response = await fetch('/api/network/mode/ap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert(data.message, 'success');
+                } else {
+                    throw new Error(data.detail || 'Failed to configure AP mode');
+                }
+            } catch (error) {
+                console.error('Error setting AP mode:', error);
+                showAlert('Failed to configure AP mode: ' + error.message, 'error');
+            }
+        }
+        
+        async function setClientMode() {
+            const ssid = document.getElementById('clientSsid').value.trim();
+            const password = document.getElementById('clientPassword').value;
+            const autoFallback = document.getElementById('autoFallback').checked;
+            const fallbackTimeout = parseInt(document.getElementById('fallbackTimeout').value);
+            
+            if (!ssid) {
+                showAlert('Please enter or select a network', 'warning');
+                return;
+            }
+            
+            if (!confirm(`Connect to "${ssid}"? This will require a reboot. Your current connection will be lost.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/network/mode/client', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ssid,
+                        password,
+                        auto_fallback: autoFallback,
+                        fallback_timeout: fallbackTimeout
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert(data.message, 'success');
+                } else {
+                    throw new Error(data.detail || 'Failed to configure client mode');
+                }
+            } catch (error) {
+                console.error('Error setting client mode:', error);
+                showAlert('Failed to configure client mode: ' + error.message, 'error');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshStatus();
+            loadConfig();
+        });
+    </script>
+</body>
+</html>
