@@ -29,7 +29,7 @@ SSH into the Pi so you can set it up.
 First install the required dependencies:
 ```bash
 sudo apt update
-sudo apt install git python3.13-dev dmsmasq hostapd
+sudo apt install git python3.13-dev dnsmasq hostapd
 ```
 
 Next, enable I2C and SPI in raspi-config:
