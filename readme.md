@@ -29,7 +29,7 @@ SSH into the Pi so you can set it up.
 First install the required dependencies:
 ```bash
 sudo apt update
-sudo apt install git python3.13-dev
+sudo apt install git python3.13-dev dnsmasq hostapd
 ```
 
 Next, enable I2C and SPI in raspi-config:
@@ -81,6 +81,11 @@ pip install ./plugins/renderers/inky_renderer
 pip install ./plugins/screens/table_screen
 pip install ./plugins/screens/zone_screen
 pip install ./plugins/controllers/button_controller
+```
+Create a place for the network config to be stored
+```bash
+sudo mkdir -p /etc/vessel-frame
+sudo chown $USER:$USER /etc/vessel-frame
 ```
 
 ### Run the project
@@ -136,4 +141,78 @@ Enable and start the service:
 sudo systemctl daemon-reload
 sudo systemctl enable vessel-frame
 sudo systemctl start vessel-frame
+```
+
+### Setup wifi mode service
+If you want to be able to switch between AP, Client and Disabled network modes you need to install the network management service.
+First, move the network mode manager script into /usr/local/bin and make it executable:
+```bash
+sudo cp ./scripts/network_mode_service.py /usr/local/bin/vessel-frame-network-mode-service
+sudo chmod +x /usr/local/bin/vessel-frame-network-mode-service
+```
+
+Now set up systemd to run this service on boot.
+```bash
+sudo nano /etc/systemd/system/vessel-frame-network-mode.service
+```
+Use the following template for the service file:
+```
+[Unit]
+Description=Vessel Frame Network Boot Configuration
+Before=vessel-frame.service
+After=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/vessel-frame-network-mode-service
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+Now enable the new network mode service:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable vessel-frame-network-mode
+```
+
+In order to modify the network settings this script needs sudo access. Set up passwordless sudo with this command:
+```bash
+sudo visudo
+```
+At the bottom of the file, add the following lines (replacing [YOUR USERNAME] for your actual username)
+```
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/sbin/ip
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/sbin/iwlist
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hostapd
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop hostapd
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/bin/systemctl start hostapd
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop dnsmasq
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/bin/systemctl start dnsmasq
+[YOUR USERNAME] ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dhcpcd
+```
+
+
+Now set up hostapd and dhcpcd.
+```bash
+sudo nano /etc/default/hostapd
+```
+You will see the line "DAEMON_CONF" but it is commented out (with the # at the start)
+Replace that line with:
+```
+DAEMON_CONF="/etc/hostapd/hostapd.conf"
+```
+Now edit the dhcpcd config
+```bash
+sudo nano /etc/dhcpcd.conf
+```
+At the end of the file add the following. It is correct that this is commented out as our script will manage it later
+```
+# Allow manual management of wlan0 for AP/Client switching
+# denyinterfaces wlan0
 ```

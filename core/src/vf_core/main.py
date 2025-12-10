@@ -23,6 +23,7 @@ from .config_manager import ConfigManager
 from .vessel_manager import VesselManager
 from .vessel_repository import VesselRepository
 from .screen_manager import ScreenManager
+from .network_manager import NetworkManager
 from .web_admin.main import start_admin_server
 
 """
@@ -176,6 +177,7 @@ async def run(argv: list[str] | None = None) -> int:
     pm = PluginManager()
     vessel_repo = VesselRepository(args.db)
     vm = VesselManager(bus, vessel_repo, in_topic="ais.decoded")
+    network_manager = NetworkManager()
 
     try:
         config_manager.load()
@@ -183,7 +185,7 @@ async def run(argv: list[str] | None = None) -> int:
         logger.exception(f"Failed to load config from {args.config}")
         return 1
 
-    admin_task = asyncio.create_task(start_admin_server(config_manager, pm, host="0.0.0.0"))
+    admin_task = asyncio.create_task(start_admin_server(config_manager, pm, network_manager, host="0.0.0.0"))
     admin_task.add_done_callback(
         partial(_log_admin_status, stop_event=stop_event, logger=logger)
     )

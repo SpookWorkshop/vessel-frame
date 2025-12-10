@@ -1,17 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vessel Frame Admin Panel</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="admin-page">
-        <div class="main">
-            <div class="header">Admin Panel</div>
-            <div id="system"></div>
-            <div id="plugin-list"></div>
+    <div class="container">
+        <header>
+            <h1>Plugin Management</h1>
+            <p>Configure your Vessel Frame plugins and system settings</p>
+        </header>
+        
+        <div class="content">
+            <div id="alertContainer"></div>
+            
+            <div class="section">
+                <h2>System Settings</h2>
+                <div id="system"></div>
+            </div>
+            
+            <div class="section">
+                <h2>Installed Plugins</h2>
+                <div id="plugin-list"></div>
+            </div>
         </div>
     </div>
+    
     <script src="/static/app.js"></script>
 </body>
 </html>
