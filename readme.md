@@ -82,6 +82,11 @@ pip install ./plugins/screens/table_screen
 pip install ./plugins/screens/zone_screen
 pip install ./plugins/controllers/button_controller
 ```
+Create a place for the network config to be stored
+```bash
+sudo mkdir -p /etc/vessel-frame
+sudo chown $USER:$USER /etc/vessel-frame
+```
 
 ### Run the project
 ```bash
@@ -144,12 +149,6 @@ First, move the network mode manager script into /usr/local/bin and make it exec
 ```bash
 sudo cp ./scripts/network_mode_service.py /usr/local/bin/vessel-frame-network-mode-service
 sudo chmod +x /usr/local/bin/vessel-frame-network-mode-service
-```
-
-Create a place for the network config to be stored
-```bash
-sudo mkdir -p /etc/vessel-frame
-sudo chown $USER:$USER /etc/vessel-frame
 ```
 
 Now set up systemd to run this service on boot.
