@@ -86,26 +86,44 @@ class AISDecoderProcessor(Plugin):
         (with errors ignored) prior to publishing on the output topic.
         """
 
+        BATCH_SIZE = 10
+
         try:
             while True:
-                ais_message = self._message_queue.get_or_none()
+                messages_processed = 0
 
-                if not ais_message:
-                    await asyncio.sleep(0.1)
-                    continue
+                while True:
+                    ais_message = self._message_queue.get_or_none()
 
-                try:
-                    decoded_sentence: dict[str, Any] = ais_message.decode().asdict()
+                    if not ais_message:
+                        await asyncio.sleep(0.1)
+                        continue
 
-                    for key, value in decoded_sentence.items():
-                        if isinstance(value, bytes):
-                            decoded_sentence[key] = value.decode(
-                                "utf-8", errors="ignore"
-                            )
+                    try:
+                        decoded_sentence: dict[str, Any] = ais_message.decode().asdict()
 
-                    await self._bus.publish(self._out_topic, decoded_sentence)
-                except Exception:
-                    self._logger.exception("Failed decoding message")
+                        msg_type = decoded_sentence.get('msg_type')
+                        mmsi = decoded_sentence.get('mmsi')
+                        
+                        # Log ALL decoded messages with their type
+                        self._logger.info(f"Decoded: Type {msg_type}, MMSI {mmsi}")
+
+                        for key, value in decoded_sentence.items():
+                            if isinstance(value, bytes):
+                                decoded_sentence[key] = value.decode(
+                                    "utf-8", errors="ignore"
+                                )
+
+                        await self._bus.publish(self._out_topic, decoded_sentence)
+                    except Exception:
+                        self._logger.exception("Failed decoding message")
+
+                    messages_processed += 1
+
+                    if messages_processed >= BATCH_SIZE:
+                        await asyncio.sleep(0)
+                        messages_processed = 0
+
         except asyncio.CancelledError:
             self._logger.info("Decode loop cancelled")
             raise
