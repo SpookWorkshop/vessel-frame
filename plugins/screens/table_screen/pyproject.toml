@@ -13,3 +13,6 @@ where = ["src"]
 
 [project.entry-points."vesselframe.plugins.screens"]
 table_screen = "table_screen:make_plugin"
+
+[project.entry-points."vesselframe.config.schemas"]
+table_screen = "table_screen:get_config_schema"

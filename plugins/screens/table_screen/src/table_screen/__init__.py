@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 import logging
 
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import ScreenPlugin, RendererPlugin
+from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin
 from vf_core.vessel_manager import VesselManager
 from vf_core.ais_utils import get_vessel_full_type_name
 from vf_core.render_strategies import PeriodicRenderStrategy
@@ -43,8 +43,11 @@ class TableScreen(ScreenPlugin):
         self._in_topic = in_topic
         self._task: asyncio.Task[None] | None = None
         self._palette = renderer.palette
+
+        interval = float(update_interval) if isinstance(update_interval, str) else update_interval
+
         self._render_strategy = PeriodicRenderStrategy(
-            self._render, max(update_interval, renderer.MIN_RENDER_INTERVAL)
+            self._render, max(interval, renderer.MIN_RENDER_INTERVAL)
         )
 
     async def activate(self) -> None:
@@ -302,6 +305,26 @@ class TableScreen(ScreenPlugin):
         bbox = font.getbbox(text)
         return bbox[3] - bbox[1]
 
+def get_config_schema() -> ConfigSchema:
+    """Return the config schema for this plugin.
+
+    Defines editable fields for the admin panel.
+
+    Returns:
+        ConfigSchema: Schema describing this plugin's configuration options.
+    """
+    return ConfigSchema(
+        plugin_name="zone_screen",
+        plugin_type="screen",
+        fields=[
+            ConfigField(
+                key="update_interval",
+                label="Min Update Interval",
+                field_type=ConfigFieldType.FLOAT,
+                default=300.0
+            ),
+        ],
+    )
 
 def make_plugin(**kwargs: Any) -> ScreenPlugin:
     """Factory function for plugin system"""
