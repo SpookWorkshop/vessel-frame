@@ -225,7 +225,11 @@ class TableScreen(ScreenPlugin):
     ) -> int:
         """Draw a single vessel row and return the next y-position."""
 
-        ship_name = vessel.get("name", "Unknown")
+        ship_name = vessel.get("name")
+        # Fall back to the mmsi if we don't know the name
+        if ship_name == "Unknown" or ship_name is None:
+            ship_name = vessel.get("mmsi") or "Unknown"
+
         ship_type = get_vessel_full_type_name(vessel.get("type", -1))
         timestamp = self._format_timestamp(vessel.get("ts", 0))
 
