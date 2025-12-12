@@ -98,8 +98,25 @@ class ZoneScreen(ScreenPlugin):
             raise
 
     def _is_valid_vessel(self, vessel: dict[str, Any]) -> bool:
-        """Return True if the vessel dict contains an MMSI and name."""
-        return vessel is not None and vessel.get("mmsi") and vessel.get("name")
+        """Return True if the vessel has MMSI, a valid name and complete dimensions."""
+        if not vessel:
+            return False
+        
+        # Must have MMSI
+        if not vessel.get("mmsi"):
+            return False
+        
+        # Must have a known name (not None, not empty, not "Unknown")
+        name = vessel.get("name")
+        if not name or name == "Unknown":
+            return False
+        
+        # Must have all four dimension fields
+        dimensions = ["bow", "stern", "port", "starboard"]
+        if not all(vessel.get(dim) for dim in dimensions):
+            return False
+        
+        return True
 
     async def _render(self) -> None:
         """Render the detail view for the current vessel, if present."""
