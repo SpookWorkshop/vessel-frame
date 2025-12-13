@@ -29,7 +29,37 @@ SSH into the Pi so you can set it up.
 First install the required dependencies:
 ```bash
 sudo apt update
-sudo apt install git python3.13-dev dnsmasq hostapd
+sudo apt install git
+```
+
+Now decide whether you want to run the setup script to get started or go through the manual setup process. If you are using the officially supported hardware then the setup script is the best option.
+
+# Set up via script
+
+First check out the project from the repository and move into the project directory
+```bash
+git clone https://github.com/SpookWorkshop/vessel-frame.git vessel-frame
+cd vessel-frame
+```
+Now make sure the setup script is executable
+```bash
+chmod +x scripts/setup.sh
+```
+Finally, run the script. It will ask questions during the process which you can answer with Y or N. At the end of the setup the device will reboot and then automatically run the vessel-frame project.
+```bash
+bash scripts/setup.sh
+```
+
+
+# Set up manually
+If you need to customise the setup or have different hardware requirements that need 3rd party plugins, you should go through the manual setup process.
+
+### Set up the OS enviroment
+SSH into the Pi so you can set it up.
+
+First install the rest of the required dependencies:
+```bash
+sudo apt install python3.13-dev dnsmasq hostapd
 ```
 
 Next, enable I2C and SPI in raspi-config:
@@ -73,6 +103,7 @@ source .venv/bin/activate
 ```
 
 ### Install vf_core & plugins
+These are the default plugins. If you have different hardware requirements then you'll need other plugins to provide support, for example non-inky screens won't work with the inky_renderer and will need a renderer specific to that screen type.
 ```bash
 pip install ./core
 pip install ./plugins/message_sources/daisy_message_source
