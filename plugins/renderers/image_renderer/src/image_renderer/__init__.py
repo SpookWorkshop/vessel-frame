@@ -56,7 +56,7 @@ class ImageRenderer(RendererPlugin):
         path = Path(out_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-    def flush(self) -> None:
+    async def flush(self) -> None:
         """Save the current canvas to the configured output path."""
         self.canvas.save(self._out_path, "png")
 
