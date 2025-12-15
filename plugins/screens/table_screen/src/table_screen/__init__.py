@@ -10,6 +10,7 @@ import logging
 from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin
 from vf_core.vessel_manager import VesselManager
+from vf_core.asset_manager import AssetManager
 from vf_core.ais_utils import get_vessel_full_type_name
 from vf_core.render_strategies import PeriodicRenderStrategy
 
@@ -32,6 +33,7 @@ class TableScreen(ScreenPlugin):
         bus: MessageBus,
         renderer: RendererPlugin,
         vm: VesselManager,
+        asset_manager: AssetManager,
         in_topic: str = "vessel.updated",
         update_interval: float = 30.0,
     ) -> None:
@@ -40,11 +42,19 @@ class TableScreen(ScreenPlugin):
         self._bus = bus
         self._renderer = renderer
         self._vessel_manager = vm
+        self._asset_manager = asset_manager
         self._in_topic = in_topic
         self._task: asyncio.Task[None] | None = None
         self._palette = renderer.palette
 
         interval = float(update_interval) if isinstance(update_interval, str) else update_interval
+
+        self._fonts: dict[str,ImageFont.FreeTypeFont] = {}
+        self._fonts["small"] = self._asset_manager.get_font("default", "SemiBold", 14)
+        self._fonts["medium"] = self._asset_manager.get_font("default", "SemiBold", 20)
+
+        self._icons: dict[str,Image.Image] = {}
+        self._icons["vessel"] = self._asset_manager.get_icon("vessel", 40)
 
         self._render_strategy = PeriodicRenderStrategy(
             self._render, max(interval, renderer.MIN_RENDER_INTERVAL)
@@ -93,7 +103,6 @@ class TableScreen(ScreenPlugin):
 
         vessels = self._vessel_manager.get_recent_vessels()
 
-        fonts = self._renderer.fonts
         canvas = self._renderer.canvas
         draw = ImageDraw.Draw(canvas)
         width, height = canvas.size
@@ -104,10 +113,10 @@ class TableScreen(ScreenPlugin):
         text_x = self.SCREEN_PADDING + self.CONTAINER_PADDING_HORZ
         text_y = self.SCREEN_PADDING + self.CONTAINER_PADDING_VERT
 
-        text_y = self._draw_header(draw, fonts, text_x, text_y)
+        text_y = self._draw_header(draw, text_x, text_y)
         text_y += 35
 
-        self._draw_table(draw, fonts, vessels, text_x, text_y, width)
+        self._draw_table(draw, vessels, text_x, text_y, width)
 
         await self._renderer.flush()
 
@@ -128,7 +137,6 @@ class TableScreen(ScreenPlugin):
     def _draw_header(
         self,
         draw: ImageDraw.ImageDraw,
-        fonts: dict[str, ImageFont.FreeTypeFont],
         x: int,
         y: int,
     ) -> int:
@@ -139,11 +147,15 @@ class TableScreen(ScreenPlugin):
             int: Updated y-position after drawing.
         """
 
-        title_font = fonts["medium"]
+        title_font = self._fonts["medium"]
         title_text = "Ship Tracker"
 
-        subtitle_font = fonts["small"]
+        subtitle_font = self._fonts["small"]
         subtitle_text = datetime.datetime.now().strftime("%A - %d/%m/%y %H:%M")
+
+        icon = self._icons["vessel"]
+        self._renderer.canvas.paste(icon, (x,y), icon)
+        x += icon.size[0] + 20
 
         draw.text((x, y), title_text, fill=self._palette["text"], font=title_font)
         y += self._get_text_height(title_font, title_text) + 4
@@ -154,7 +166,6 @@ class TableScreen(ScreenPlugin):
     def _draw_table(
         self,
         draw: ImageDraw.ImageDraw,
-        fonts: dict[str, ImageFont.FreeTypeFont],
         vessels: list[dict[str, Any]],
         x: int,
         y: int,
@@ -162,7 +173,7 @@ class TableScreen(ScreenPlugin):
     ) -> None:
         """Draw the table headers and rows for the provided vessels."""
 
-        body_font = fonts["small"]
+        body_font = self._fonts["small"]
 
         col_widths = self._calculate_column_widths(body_font, vessels)
         gap = self._calculate_column_gap(x, width, col_widths)
