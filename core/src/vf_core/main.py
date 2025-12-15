@@ -24,6 +24,7 @@ from .vessel_manager import VesselManager
 from .vessel_repository import VesselRepository
 from .screen_manager import ScreenManager
 from .network_manager import NetworkManager
+from .asset_manager import AssetManager
 from .web_admin.main import start_admin_server
 
 """
@@ -178,6 +179,7 @@ async def run(argv: list[str] | None = None) -> int:
     vessel_repo = VesselRepository(args.db)
     vm = VesselManager(bus, vessel_repo, in_topic="ais.decoded")
     network_manager = NetworkManager()
+    asset_manager = AssetManager(Path(__file__).parent / "assets")
 
     try:
         config_manager.load()
@@ -222,7 +224,7 @@ async def run(argv: list[str] | None = None) -> int:
             GROUP_RENDERER, configured_renderer, **kwargs
         )
 
-        sm = ScreenManager(bus, pm, renderer, vm, cm=config_manager)
+        sm = ScreenManager(bus, pm, renderer, vm, cm=config_manager, asset_manager=asset_manager)
         await sm.start()
     else:
         logger.warning("No renderer created")
