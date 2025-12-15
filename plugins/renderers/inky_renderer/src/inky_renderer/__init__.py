@@ -27,22 +27,6 @@ class InkyRenderer(RendererPlugin):
     ) -> None:
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inky-display")
 
-        plugin_dir = Path(__file__).parent
-        font_path = plugin_dir / "fonts" / "Inter" / "Inter-VariableFont_opsz,wght.ttf"
-
-        if not font_path.exists():
-            raise FileNotFoundError(f"Font file not found: {font_path}")
-
-        try:
-            self._fonts = {
-                "xsmall": self._load_font(font_path, 8, "SemiBold"),
-                "small": self._load_font(font_path, 14, "SemiBold"),
-                "medium": self._load_font(font_path, 20, "SemiBold"),
-                "large": self._load_font(font_path, 35, "Bold"),
-            }
-        except Exception as e:
-            raise RuntimeError(f"Failed to load fonts from {font_path}: {e}") from e
-
         self._display = auto()
         self._orientation = orientation
 

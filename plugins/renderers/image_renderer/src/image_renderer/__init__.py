@@ -23,22 +23,6 @@ class ImageRenderer(RendererPlugin):
         height: int = 800,
         orientation: str = "portrait",
     ) -> None:
-        plugin_dir = Path(__file__).parent
-        font_path = plugin_dir / "fonts" / "Inter" / "Inter-VariableFont_opsz,wght.ttf"
-
-        if not font_path.exists():
-            raise FileNotFoundError(f"Font file not found: {font_path}")
-
-        try:
-            self._fonts = {
-                "xsmall": ImageFont.truetype(font_path, 8),
-                "small": ImageFont.truetype(font_path, 14),
-                "medium": ImageFont.truetype(font_path, 20),
-                "large": ImageFont.truetype(font_path, 35),
-            }
-        except Exception as e:
-            raise RuntimeError(f"Failed to load fonts from {font_path}: {e}") from e
-
         self._out_path = out_path
         self._orientation = orientation
 

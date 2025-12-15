@@ -8,9 +8,6 @@ version = "0.0.0"
 requires-python = ">=3.10"
 dependencies = ["pillow>=12.0.0","inky>=2.2.1"]
 
-[tool.setuptools.package-data]
-inky_renderer = ["fonts/**/*.ttf"]
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
