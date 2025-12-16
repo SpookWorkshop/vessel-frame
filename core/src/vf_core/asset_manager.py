@@ -32,12 +32,22 @@ class AssetManager:
 
         return font
     
-    def get_icon(self, role: str, size: int) -> Image.Image:
-        icon = self._icon_cache.get((role, size))
+    def get_icon(self, role: str, size: int, colour: str) -> Image.Image:
+        icon = self._icon_cache.get((role, size, colour))
 
         if not icon:
             icon_path = self._root_dir / "icons" / self._default_icons / self.ICON_MAP.get(role)
             icon = self._load_icon(icon_path, size)
+
+            if icon.mode != "RGBA":
+                icon = icon.convert("RGBA")
+
+            r, g, b = tuple(int(colour.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+            tmp = Image.new("RGBA", icon.size, (r, g, b, 255))
+            tmp.putalpha(icon.split()[3])
+            icon = tmp
+
+            self._icon_cache[(role, size, colour)] = icon
 
         return icon
 
