@@ -177,14 +177,17 @@ async def disable_plugin(
         bool: True on success (or if the plugin was already disabled).
     """
 
-    plugin_list = cm.get(f"plugins.{update.category}")
+    category = update.category.value
+
+    plugin_list = cm.get(f"plugins.{category}")
+    
     if plugin_list is None:
         return True
 
     if update.name in plugin_list:
         plugin_list.remove(update.name)
 
-    cm.set(f"plugins.{update.category}", plugin_list)
+    cm.set(f"plugins.{category}", plugin_list)
     cm.save()
 
     return True

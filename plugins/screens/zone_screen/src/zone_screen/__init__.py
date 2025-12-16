@@ -115,35 +115,24 @@ class ZoneScreen(ScreenPlugin):
 
     def _is_valid_vessel(self, vessel: dict[str, Any]) -> bool:
         """Return True if the vessel has MMSI, a valid name and complete dimensions."""
-        self._logger.info(f"Check if vessel valid {vessel}")
         if not vessel:
-            self._logger.info("Reject - no vessel info")
             return False
         
         # Must have MMSI
         if not vessel.get("mmsi"):
-            self._logger.info("Reject - invalid mmsi")
             return False
-        
-        self._logger.info("MMSI OK")
 
         # Must have a known name (not None, not empty, not "Unknown")
         name = vessel.get("name")
         if not name or name == "Unknown":
-            self._logger.info(f"Reject - invalid name {name}")
             return False
-        
-        self._logger.info(f"Name ok: {name}")
         
         # Must have a size in both axes
         length = vessel.get("bow", 0) + vessel.get("stern", 0)
         width = vessel.get("port", 0) + vessel.get("starboard", 0)
 
         if length == 0 or width == 0:
-            self._logger.info("Reject - invalid dimensions")
             return False
-        
-        self._logger.info("Dimensions ok. Vessel is valid")
         
         return True
 
