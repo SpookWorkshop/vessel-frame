@@ -38,20 +38,30 @@ class ScreenManager:
         instances, and activates the first one as the active screen. Logs a
         warning if no screens are found.
         """
-        for entry_point in self._pm.iter_entry_points(GROUP_SCREENS):
-            plugin_config = self._cm.get(entry_point.name)
-            kwargs = plugin_config if isinstance(plugin_config, dict) else {}
+        configured_screens = self._cm.get("plugins.screens", [])
 
-            screen: ScreenPlugin = self._pm.create(
-                GROUP_SCREENS,
-                entry_point.name,
-                renderer=self._renderer,
-                vm=self._vm,
-                bus=self._bus,
-                asset_manager=self._asset_manager,
-                **kwargs
-            )
-            self._screens.append(screen)
+        if not configured_screens:
+            self._logger.warning("No screens configured in plugins.screens")
+            return
+
+        for screen_name in configured_screens:
+            try:
+                plugin_config = self._cm.get(screen_name)
+                kwargs = plugin_config if isinstance(plugin_config, dict) else {}
+
+                screen: ScreenPlugin = self._pm.create(
+                    GROUP_SCREENS,
+                    screen_name,
+                    renderer=self._renderer,
+                    vm=self._vm,
+                    bus=self._bus,
+                    asset_manager=self._asset_manager,
+                    **kwargs
+                )
+                self._screens.append(screen)
+                self._logger.info(f"Loaded screen: {screen_name}")
+            except Exception:
+                self._logger.exception(f"Failed to load screen '{screen_name}'")
 
         asyncio.create_task(self._loop())
 
