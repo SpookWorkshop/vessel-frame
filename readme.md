@@ -15,11 +15,13 @@ This project has been tested with the following hardware setup:
  - [Wegmatt Daisy Mini](https://shop.wegmatt.com/products/daisy-mini-ais-receiver)
  - [Pimoroni Inky Impression 7](https://shop.pimoroni.com/products/inky-impression-7-3?variant=55186435244411) (Gallery and Spectra 6 models both supported)
 
+On the Daisy Mini, connect the 5V, GND, SDA and SCL pins to the same pins on the Inky screen's connector
+
 
 ### Configure the Raspberry Pi
 Use Raspberry Pi Imager to set up your SD card.
 
-When selecting the Operating System, choose "Raspberry Pi OS (other)" then "Raspberry Pi OS (Legacy 32/64-bit) Lite".
+When selecting the Operating System, choose "Raspberry Pi OS (other)" then "Raspberry Pi OS (32/64-bit) Lite".
 
 When the imager asks if you want to set up configuration options, choose yes and set up both SSH and WiFi.
 
