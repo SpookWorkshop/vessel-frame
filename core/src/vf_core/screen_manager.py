@@ -6,6 +6,7 @@ from .message_bus import MessageBus
 from .plugin_manager import PluginManager
 from .plugin_types import GROUP_SCREENS, RendererPlugin, ScreenPlugin
 from .vessel_manager import VesselManager
+from .asset_manager import AssetManager
 
 
 class ScreenManager:
@@ -15,7 +16,8 @@ class ScreenManager:
         pm: PluginManager,
         renderer: RendererPlugin,
         vm: VesselManager,
-        cm: ConfigManager
+        cm: ConfigManager,
+        asset_manager: AssetManager,
     ) -> None:
         self._logger = logging.getLogger(__name__)
         self._bus = bus
@@ -24,6 +26,7 @@ class ScreenManager:
         self._renderer = renderer
         self._vm = vm
         self._cm = cm
+        self._asset_manager = asset_manager
         self._active_screen: ScreenPlugin | None = None
         self._current_screen_index: int = 0
 
@@ -45,6 +48,7 @@ class ScreenManager:
                 renderer=self._renderer,
                 vm=self._vm,
                 bus=self._bus,
+                asset_manager=self._asset_manager,
                 **kwargs
             )
             self._screens.append(screen)

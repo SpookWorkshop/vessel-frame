@@ -5,3 +5,4 @@ config.toml
 *.log
 *.sqlite
 **/.secrets
+data
