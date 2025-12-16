@@ -6,6 +6,7 @@ class AssetManager:
         "vessel": "vessel.png",
         "id": "fingerprint.png",
         "callsign": "radio.png",
+        "ship_type": "shiptype.png",
         "destination": "route.png",
         "speed": "gauge.png"
     }

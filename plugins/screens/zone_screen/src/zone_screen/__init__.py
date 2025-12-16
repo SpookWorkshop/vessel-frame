@@ -71,11 +71,10 @@ class ZoneScreen(ScreenPlugin):
 
         self._icons: dict[str,Image.Image] = {}
         icon_colour = self._palette["icon"]
+
         self._icons["vessel"] = self._asset_manager.get_icon("vessel", 40, icon_colour)
-        self._icons["id"] = self._asset_manager.get_icon("id", 20, icon_colour)
-        self._icons["callsign"] = self._asset_manager.get_icon("callsign", 20, icon_colour)
-        self._icons["destination"] = self._asset_manager.get_icon("destination", 20, icon_colour)
-        self._icons["speed"] = self._asset_manager.get_icon("speed", 20, icon_colour)
+        for name in ["id", "callsign", "ship_type", "destination", "speed"]:
+            self._icons[name] = self._asset_manager.get_icon(name, 20, icon_colour)
 
         lat = float(zone_lat) if isinstance(zone_lat, str) else zone_lat
         lon = float(zone_lon) if isinstance(zone_lon, str) else zone_lon
@@ -103,9 +102,10 @@ class ZoneScreen(ScreenPlugin):
         """Internal loop that receives zone events and requests renders."""
         try:
             async for msg in self._bus.subscribe(self._in_topic):
-                self._current_vessel = msg.get("vessel")
+                vessel = msg.get("vessel")
                 self._logger.info("Zone Screen Update")
-                if self._current_vessel and self._is_valid_vessel(self._current_vessel):
+                if vessel and self._is_valid_vessel(vessel):
+                    self._current_vessel = vessel
                     await self._render_strategy.request_render()
         except asyncio.CancelledError:
             raise
@@ -115,22 +115,35 @@ class ZoneScreen(ScreenPlugin):
 
     def _is_valid_vessel(self, vessel: dict[str, Any]) -> bool:
         """Return True if the vessel has MMSI, a valid name and complete dimensions."""
+        self._logger.info(f"Check if vessel valid {vessel}")
         if not vessel:
+            self._logger.info("Reject - no vessel info")
             return False
         
         # Must have MMSI
         if not vessel.get("mmsi"):
+            self._logger.info("Reject - invalid mmsi")
             return False
         
+        self._logger.info("MMSI OK")
+
         # Must have a known name (not None, not empty, not "Unknown")
         name = vessel.get("name")
         if not name or name == "Unknown":
+            self._logger.info(f"Reject - invalid name {name}")
             return False
         
-        # Must have all four dimension fields
-        dimensions = ["bow", "stern", "port", "starboard"]
-        if not all(vessel.get(dim) for dim in dimensions):
+        self._logger.info(f"Name ok: {name}")
+        
+        # Must have a size in both axes
+        length = vessel.get("bow", 0) + vessel.get("stern", 0)
+        width = vessel.get("port", 0) + vessel.get("starboard", 0)
+
+        if length == 0 or width == 0:
+            self._logger.info("Reject - invalid dimensions")
             return False
+        
+        self._logger.info("Dimensions ok. Vessel is valid")
         
         return True
 
@@ -140,6 +153,8 @@ class ZoneScreen(ScreenPlugin):
 
         if not vessel:
             return
+        
+        self._logger.info("Rendering vessel")
 
         canvas = self._renderer.canvas
         draw = ImageDraw.Draw(canvas)
@@ -463,7 +478,7 @@ class ZoneScreen(ScreenPlugin):
             {
                 "label": "Vessel Type",
                 "value": get_vessel_full_type_name(vessel.get("type", -1)),
-                "icon": self._icons["callsign"]
+                "icon": self._icons["ship_type"]
             },
         ]
 
