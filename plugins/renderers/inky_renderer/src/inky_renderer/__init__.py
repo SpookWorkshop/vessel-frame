@@ -92,6 +92,7 @@ class InkyRenderer(RendererPlugin):
             "foreground": "#FFFFFF",
             "line": "#0000FF",
             "text": "#0000FF",
+            "icon": "#0000FF",
             "accent": "#000000",
         }
 
