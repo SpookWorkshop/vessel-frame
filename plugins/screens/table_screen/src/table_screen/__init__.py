@@ -54,7 +54,7 @@ class TableScreen(ScreenPlugin):
         self._fonts["medium"] = self._asset_manager.get_font("default", "SemiBold", 20)
 
         self._icons: dict[str,Image.Image] = {}
-        self._icons["vessel"] = self._asset_manager.get_icon("vessel", 40)
+        self._icons["vessel"] = self._asset_manager.get_icon("vessel", 40, self._palette["icon"])
 
         self._render_strategy = PeriodicRenderStrategy(
             self._render, max(interval, renderer.MIN_RENDER_INTERVAL)

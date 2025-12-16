@@ -9,6 +9,7 @@ import logging
 from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin
 from vf_core.vessel_manager import VesselManager
+from vf_core.asset_manager import AssetManager
 from vf_core.ais_utils import get_vessel_full_type_name
 from vf_core.render_strategies import PeriodicRenderStrategy
 
@@ -41,6 +42,7 @@ class ZoneScreen(ScreenPlugin):
         bus: MessageBus,
         renderer: RendererPlugin,
         vm: VesselManager,
+        asset_manager: AssetManager,
         in_topic: str = "vessel.zone_entered",
         update_interval: float = 10.0,
         zone_name: str = "Unknown",
@@ -53,6 +55,7 @@ class ZoneScreen(ScreenPlugin):
         self._bus = bus
         self._renderer = renderer
         self._vessel_manager = vm
+        self._asset_manager = asset_manager
         self._in_topic = in_topic
         self._task: asyncio.Task[None] | None = None
         self._palette = renderer.palette
@@ -60,6 +63,19 @@ class ZoneScreen(ScreenPlugin):
         self._render_strategy = PeriodicRenderStrategy(
             self._render, renderer.MIN_RENDER_INTERVAL + update_interval
         )
+
+        self._fonts: dict[str,ImageFont.FreeTypeFont] = {}
+        self._fonts["small"] = self._asset_manager.get_font("default", "SemiBold", 14)
+        self._fonts["medium"] = self._asset_manager.get_font("default", "SemiBold", 20)
+        self._fonts["large"] = self._asset_manager.get_font("default", "Bold", 35)
+
+        self._icons: dict[str,Image.Image] = {}
+        icon_colour = self._palette["icon"]
+        self._icons["vessel"] = self._asset_manager.get_icon("vessel", 40, icon_colour)
+        self._icons["id"] = self._asset_manager.get_icon("id", 20, icon_colour)
+        self._icons["callsign"] = self._asset_manager.get_icon("callsign", 20, icon_colour)
+        self._icons["destination"] = self._asset_manager.get_icon("destination", 20, icon_colour)
+        self._icons["speed"] = self._asset_manager.get_icon("speed", 20, icon_colour)
 
         lat = float(zone_lat) if isinstance(zone_lat, str) else zone_lat
         lon = float(zone_lon) if isinstance(zone_lon, str) else zone_lon
@@ -88,7 +104,7 @@ class ZoneScreen(ScreenPlugin):
         try:
             async for msg in self._bus.subscribe(self._in_topic):
                 self._current_vessel = msg.get("vessel")
-
+                self._logger.info("Zone Screen Update")
                 if self._current_vessel and self._is_valid_vessel(self._current_vessel):
                     await self._render_strategy.request_render()
         except asyncio.CancelledError:
@@ -125,7 +141,6 @@ class ZoneScreen(ScreenPlugin):
         if not vessel:
             return
 
-        fonts = self._renderer.fonts
         canvas = self._renderer.canvas
         draw = ImageDraw.Draw(canvas)
         width, height = canvas.size
@@ -137,11 +152,11 @@ class ZoneScreen(ScreenPlugin):
         text_y = self.SCREEN_PADDING + self.CONTAINER_PADDING_VERT
 
         # Draw sections
-        text_y = self._draw_header(draw, fonts, text_x, text_y)
+        text_y = self._draw_header(draw, text_x, text_y)
         text_y += self.SECTION_SPACING
-        text_y = self._draw_vessel_diagram(draw, fonts, text_x, text_y, width, vessel)
-        text_y = self._draw_vessel_name(draw, fonts, text_x, text_y, width, vessel)
-        text_y = self._draw_vessel_info(draw, fonts, text_x, text_y, width, vessel)
+        text_y = self._draw_vessel_diagram(draw, text_x, text_y, width, vessel)
+        text_y = self._draw_vessel_name(draw, text_x, text_y, width, vessel)
+        text_y = self._draw_vessel_info(draw, text_x, text_y, width, vessel)
 
         await self._renderer.flush()
 
@@ -161,15 +176,14 @@ class ZoneScreen(ScreenPlugin):
     def _draw_header(
         self,
         draw: ImageDraw.ImageDraw,
-        fonts: dict[str, ImageFont.FreeTypeFont],
         x: int,
         y: int,
     ) -> int:
         """Draw the title and timestamp header and return the new y-position."""
-        title_font = fonts["medium"]
+        title_font = self._fonts["medium"]
         title_text = "Ship Tracker"
 
-        subtitle_font = fonts["small"]
+        subtitle_font = self._fonts["small"]
         subtitle_text = datetime.datetime.now().strftime("%A - %d/%m/%y %H:%M")
 
         draw.text((x, y), title_text, fill=self._palette["text"], font=title_font)
@@ -181,7 +195,6 @@ class ZoneScreen(ScreenPlugin):
     def _draw_vessel_diagram(
         self,
         draw: ImageDraw.ImageDraw,
-        fonts: dict[str, ImageFont.FreeTypeFont],
         x: int,
         y: int,
         width: int,
@@ -228,7 +241,7 @@ class ZoneScreen(ScreenPlugin):
         inner_height = diagram_height - (border_padding * 2)
 
         # Calc space for labels
-        font = fonts["small"]
+        font = self._fonts["small"]
 
         # Width dimension indicator space
         wid_text = f"{ship_wid}m"
@@ -402,14 +415,13 @@ class ZoneScreen(ScreenPlugin):
     def _draw_vessel_name(
         self,
         draw: ImageDraw.ImageDraw,
-        fonts: dict[str, ImageFont.FreeTypeFont],
         x: int,
         y: int,
         width: int,
         vessel: dict[str, Any],
     ) -> int:
         """Draw the vessel name with an underline and return new y."""
-        font = fonts["large"]
+        font = self._fonts["large"]
         name = vessel.get("name", "Unknown")
 
         text_width, text_height = self._get_text_size(font, name)
@@ -437,32 +449,32 @@ class ZoneScreen(ScreenPlugin):
     def _draw_vessel_info(
         self,
         draw: ImageDraw.ImageDraw,
-        fonts: dict[str, ImageFont.FreeTypeFont],
         x: int,
         y: int,
         width: int,
         vessel: dict[str, Any],
     ) -> int:
         """Draw key/value rows of data about the vessel."""
-        font = fonts["medium"]
+        font = self._fonts["medium"]
 
         info_rows = [
-            {"label": "MMSI", "value": str(vessel.get("mmsi", "Unknown"))},
-            {"label": "Callsign", "value": str(vessel.get("callsign", "Unknown"))},
+            {"label": "MMSI", "value": str(vessel.get("mmsi", "Unknown")), "icon": self._icons["id"]},
+            {"label": "Callsign", "value": str(vessel.get("callsign", "Unknown")), "icon": self._icons["callsign"]},
             {
                 "label": "Vessel Type",
                 "value": get_vessel_full_type_name(vessel.get("type", -1)),
+                "icon": self._icons["callsign"]
             },
         ]
 
         if "destination" in vessel and vessel["destination"]:
-            info_rows.append({"label": "Destination", "value": vessel["destination"]})
+            info_rows.append({"label": "Destination", "value": vessel["destination"], "icon": self._icons["destination"]})
 
         if "speed" in vessel and vessel["speed"] is not None:
-            info_rows.append({"label": "Speed", "value": f"{vessel['speed']} kts"})
+            info_rows.append({"label": "Speed", "value": f"{vessel['speed']} kts", "icon": self._icons["speed"]})
 
         for row in info_rows:
-            y = self._draw_info_row(draw, font, x, y, width, row["label"], row["value"])
+            y = self._draw_info_row(draw, font, x, y, width, row["label"], row["value"], row["icon"])
 
         return y
 
@@ -475,11 +487,13 @@ class ZoneScreen(ScreenPlugin):
         width: int,
         label: str,
         value: str,
+        icon: Image.Image,
     ) -> int:
         """Draw a single info row with label on the left and value on the right."""
         icon_width = 30
 
-        # No icons implemented yet
+        # Draw icon
+        self._renderer.canvas.paste(icon, (x,y), icon)
 
         # Draw label and value
         label_x = x + icon_width
