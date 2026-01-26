@@ -1,0 +1,9 @@
+There are multiple categories of plugin which can be created. Refer to the table below for a list of plugin categories and examples to reference for how to implement them.
+
+|Type|Description|Example|
+|----|-----------|-------|
+|Message Source|This plugin type is for receiving and broadcasting raw messages to the rest of the system, eg encoded AIS or ADSB-B strings|[daisy message source](../plugins/message_sources/daisy_message_source) reads from a dAISy device connected via I2C.|
+|Message Processor|A message processor plugin should transform raw data received from a Message Source and output decoded or structured data based on the raw input|[ais_decoder_processor](../plugins/message_processors/ais_decoder_processor) takes encoded AIS data, decodes it and outputs it as a dictionary|
+|Renderer|Renderers take a PIL canvas and should interface with any hardware in order to display the canvas contents appropriately, eg render it to a screen or write it to a filesystem|[image_renderer](../plugins/renderers/image_renderer) takes the current screen and renders it to an image which is stored on the filesystem
+|Screen|Screens represent any UI layout that can be displayed via a renderer|[table_screen](../plugins/screens/table_screen) listens to vessel update broadcasts and renders a table containing the name, type and last heard time|
+|Controller|Controller plugins perform miscellaneous operations, such as reading button input, setting led output or forwarding raw message data to a brokerage service|[button_controller](../plugins/controllers/button_controller) listens for button presses via GPIO and changes screen based on the selection
