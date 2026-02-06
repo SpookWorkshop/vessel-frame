@@ -1,12 +1,14 @@
 from __future__ import annotations
 import asyncio
 import datetime
+import math
 from typing import Any
 from contextlib import suppress
 from PIL import Image, ImageDraw, ImageFont
 import logging
 from pathlib import Path
 import urllib.request
+import os
 
 from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import (
@@ -23,10 +25,32 @@ from vf_core.render_strategies import PeriodicRenderStrategy
 class MapScreen(ScreenPlugin):
     """Screen to display a map of vessels which were recently observed."""
 
+    # Approximate metres per degree of latitude
+    METRES_PER_DEGREE_LAT = 111_320
+
     SCREEN_PADDING = 10
     CONTAINER_PADDING_HORZ = 20
     CONTAINER_PADDING_VERT = 20
     HEADER_HEIGHT = 70
+
+    # Ship shape rendering thresholds (in metres per pixel)
+    # Below MIN: too zoomed in, ships would be too large
+    # Above MAX: too zoomed out, ships would be too small to see any detail
+    SHAPE_MIN_SCALE = 1.0
+    SHAPE_MAX_SCALE = 50.0
+
+    # Ship size constraints in pixels
+    SHIP_MIN_LENGTH_PX = 15
+    SHIP_MAX_LENGTH_PX = 80
+    SHIP_MIN_BEAM_PX = 6
+    SHIP_MAX_BEAM_PX = 30
+
+    # Default ship dimensions if not provided (in metres)
+    DEFAULT_SHIP_LENGTH = 50
+    DEFAULT_SHIP_BEAM = 10
+
+    # Marker size when drawing dots
+    DOT_RADIUS = 5
 
     def __init__(
         self,
@@ -43,7 +67,9 @@ class MapScreen(ScreenPlugin):
         bounds_br_lon: float = 0.0,
         cache_dir: str = "data",
         map_style: str = "mapbox/light-v11",
-        mapbox_api_key: str = ""
+        mapbox_api_key: str = "",
+        vessel_fill_colour: str = "#FF0000",
+        vessel_outline_colour: str = "#000000",
     ) -> None:
         self._logger = logging.getLogger(__name__)
 
@@ -60,6 +86,10 @@ class MapScreen(ScreenPlugin):
 
         if len(self._mapbox_key) == 0:
             self._logger.warning("Mapbox API Key not set. Map backgrounds may be unavailable")
+
+        # Vessel colours
+        self._vessel_fill = vessel_fill_colour
+        self._vessel_outline = vessel_outline_colour
 
         # Store bounds as min/max for clarity since MapBox uses this terminology
         # Top-left = (max_lat, min_lon), Bottom-right = (min_lat, max_lon)
@@ -80,6 +110,7 @@ class MapScreen(ScreenPlugin):
         self._fonts: dict[str, ImageFont.FreeTypeFont] = {
             "small": self._asset_manager.get_font("default", "SemiBold", 14),
             "medium": self._asset_manager.get_font("default", "SemiBold", 20),
+            "vessel": self._asset_manager.get_font("default", "SemiBold", 10),
         }
 
         self._icons: dict[str, Image.Image] = {
@@ -103,6 +134,7 @@ class MapScreen(ScreenPlugin):
 
         for name, dimensions in orientations:
             img_path = self._cache_dir / name
+            
             if img_path.exists():
                 continue
 
@@ -128,7 +160,7 @@ class MapScreen(ScreenPlugin):
 
         if path.exists():
             return Image.open(path)
-
+        
         self._logger.warning(f"Map image not found: {path}")
         return None
 
@@ -138,6 +170,17 @@ class MapScreen(ScreenPlugin):
         is_portrait = canvas.width < canvas.height
 
         return self._map_portrait if is_portrait else self._map_landscape
+
+    def _calculate_scale(self, height: int) -> float:
+        """Calculate metres per pixel based on current bounds and canvas height.
+        
+        Returns:
+            Metres per pixel for the current view.
+        """
+        lat_range = self._max_lat - self._min_lat
+        lat_range_metres = lat_range * self.METRES_PER_DEGREE_LAT
+
+        return lat_range_metres / height
 
     async def activate(self) -> None:
         """Start listening for updates and enable periodic rendering."""
@@ -151,9 +194,7 @@ class MapScreen(ScreenPlugin):
         """Stop listening for updates and cancel pending work."""
         if self._task and not self._task.done():
             await self._render_strategy.stop()
-
             self._task.cancel()
-
             with suppress(asyncio.CancelledError):
                 await self._task
 
@@ -175,6 +216,14 @@ class MapScreen(ScreenPlugin):
         draw = ImageDraw.Draw(canvas)
         width, height = canvas.size
 
+        self._logger.info("MAP SCREEN RENDERING")
+
+        # Calculate current scale for ship rendering decisions
+        metres_per_pixel = self._calculate_scale(height)
+        use_shapes = self.SHAPE_MIN_SCALE <= metres_per_pixel <= self.SHAPE_MAX_SCALE
+
+        #self._logger.debug(f"Scale: {metres_per_pixel:.2f} m/px, use shapes: {use_shapes}")
+
         self._renderer.clear()
 
         # Draw the map background
@@ -187,12 +236,12 @@ class MapScreen(ScreenPlugin):
 
         # Draw header content
         text_x = self.SCREEN_PADDING + self.CONTAINER_PADDING_HORZ
-        text_y = self.SCREEN_PADDING + self.CONTAINER_PADDING_VERT
+        text_y = self.CONTAINER_PADDING_VERT
         self._draw_header(draw, text_x, text_y)
 
         # Draw vessel markers
         for vessel in vessels:
-            self._draw_vessel(draw, vessel, width, height)
+            self._draw_vessel(draw, vessel, width, height, metres_per_pixel, use_shapes)
 
         await self._renderer.flush()
 
@@ -209,12 +258,14 @@ class MapScreen(ScreenPlugin):
 
     def _draw_header(self, draw: ImageDraw.ImageDraw, x: int, y: int) -> None:
         """Draw the title and timestamp header."""
+
         title_font = self._fonts["medium"]
         title_text = "Ship Tracker"
 
         subtitle_font = self._fonts["small"]
-        subtitle_text = datetime.datetime.now().strftime("%A - %d/%m/%y %H:%M")
-
+        date_format = os.getenv('DATE_FORMAT', '%d/%m/%y')
+        subtitle_text = datetime.datetime.now().strftime(f"%A - {date_format} %H:%M")
+        
         icon = self._icons["vessel"]
         self._renderer.canvas.paste(icon, (x, y), icon)
         x += icon.size[0] + 20
@@ -229,6 +280,8 @@ class MapScreen(ScreenPlugin):
         vessel: dict[str, Any],
         width: int,
         height: int,
+        metres_per_pixel: float,
+        use_shapes: bool,
     ) -> None:
         """Draw a single vessel marker at its geographic position."""
         lat = vessel.get("lat")
@@ -245,22 +298,141 @@ class MapScreen(ScreenPlugin):
             return
 
         # Convert geographic coordinates to pixel position
-        # x increases west to east (min_lon to max_lon)
-        # y increases north to south (max_lat to min_lat)
         x = ((lon - self._min_lon) / (self._max_lon - self._min_lon)) * width
         y = ((self._max_lat - lat) / (self._max_lat - self._min_lat)) * height
 
-        # Draw marker
-        point_radius = 5
+        # Get heading (prefer true heading, fall back to COG)
+        heading = vessel.get("true_heading") or vessel.get("heading")
+        if heading is None or heading == 511:  # 511 is a special value meaning the ship can't provide that data
+            heading = vessel.get("cog")
+
+        # Determine whether to draw shape or dot
+        # Use shape only if within scale threshold AND we have valid heading
+        has_valid_heading = heading is not None and heading != 360  # 360 = not available
+        
+        if use_shapes and has_valid_heading:
+            self._draw_vessel_shape(draw, vessel, x, y, heading, metres_per_pixel)
+        else:
+            self._draw_vessel_dot(draw, x, y)
+
+        # Draw vessel name
+        self._draw_vessel_label(draw, vessel, x, y, width, height)
+
+    def _draw_vessel_dot(self, draw: ImageDraw.ImageDraw, x: float, y: float) -> None:
+        """Draw a vessel as a dot."""
         draw.ellipse(
             [
-                x - point_radius,
-                y - point_radius,
-                x + point_radius,
-                y + point_radius,
+                x - self.DOT_RADIUS,
+                y - self.DOT_RADIUS,
+                x + self.DOT_RADIUS,
+                y + self.DOT_RADIUS,
             ],
-            fill=self._palette["text"],
+            fill=self._vessel_fill,
+            outline=self._vessel_outline,
+            width=2,
         )
+
+    def _draw_vessel_shape(
+        self,
+        draw: ImageDraw.ImageDraw,
+        vessel: dict[str, Any],
+        x: float,
+        y: float,
+        heading: float,
+        metres_per_pixel: float,
+    ) -> None:
+        """Draw a vessel as a pointed rectangle orientated by heading."""
+        # Get ship dimensions in metres, use defaults if not available
+        length = vessel.get("length") or self.DEFAULT_SHIP_LENGTH
+        beam = vessel.get("beam") or self.DEFAULT_SHIP_BEAM
+
+        # Convert to pixels
+        length_px = length / metres_per_pixel
+        beam_px = beam / metres_per_pixel
+
+        # Clamp to reasonable pixel sizes
+        length_px = max(self.SHIP_MIN_LENGTH_PX, min(self.SHIP_MAX_LENGTH_PX, length_px))
+        beam_px = max(self.SHIP_MIN_BEAM_PX, min(self.SHIP_MAX_BEAM_PX, beam_px))
+
+        # Centre ship at origin, bow pointing up (north = 0 degrees)
+        # The bow point is at the top, stern is flat at the bottom
+        half_length = length_px / 2
+        half_beam = beam_px / 2
+        bow_length = length_px * 0.25  # Bow section is 25% of total length
+
+        points = [
+            (0, -half_length),                           # Bow tip
+            (-half_beam, -half_length + bow_length),     # Port bow
+            (-half_beam, half_length),                   # Port stern
+            (half_beam, half_length),                    # Starboard stern
+            (half_beam, -half_length + bow_length),      # Starboard bow
+        ]
+
+        # Rotate points by heading
+        # AIS heading: 0 = north, 90 = east, 180 = south, 270 = west
+        # We need to convert to radians and rotate clockwise
+        heading_rad = math.radians(heading)
+        rotated_points = []
+        for px, py in points:
+            rx = px * math.cos(heading_rad) - py * math.sin(heading_rad)
+            ry = px * math.sin(heading_rad) + py * math.cos(heading_rad)
+            rotated_points.append((x + rx, y + ry))
+
+        # Draw the ship shape
+        draw.polygon(
+            rotated_points,
+            fill=self._vessel_fill,
+            outline=self._vessel_outline,
+            width=2,
+        )
+
+    def _draw_vessel_label(
+        self,
+        draw: ImageDraw.ImageDraw,
+        vessel: dict[str, Any],
+        x: float,
+        y: float,
+        width: int,
+        height: int,
+    ) -> None:
+        """Draw the vessel name near its marker."""
+        name = vessel.get("name")
+        if not name or name == "Unknown":
+            # Fall back to MMSI if no name
+            mmsi = vessel.get("mmsi")
+            if mmsi:
+                name = str(mmsi)
+            else:
+                return
+            
+        font = self._fonts["vessel"]
+        
+        # Get text dimensions
+        bbox = font.getbbox(name)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
+        # Position label to the right of the marker by default
+        label_x = x + self.DOT_RADIUS + 4
+        label_y = y - text_height / 2
+
+        # Adjust if label would go off the right edge
+        if label_x + text_width > width - self.SCREEN_PADDING:
+            # Place to the left instead
+            label_x = x - self.DOT_RADIUS - 4 - text_width
+
+        # Adjust if label would go off top or bottom
+        if label_y < self.SCREEN_PADDING + self.HEADER_HEIGHT:
+            label_y = self.SCREEN_PADDING + self.HEADER_HEIGHT
+        elif label_y + text_height > height - self.SCREEN_PADDING:
+            label_y = height - self.SCREEN_PADDING - text_height
+
+        # Draw text with halo for readability
+        halo_colour = self._palette.get("foreground", "#FFFFFF")
+        for dx, dy in [(-1, -1), (-1, 1), (1, -1), (1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)]:
+            draw.text((label_x + dx, label_y + dy), name, fill=halo_colour, font=font)
+        
+        draw.text((label_x, label_y), name, fill=self._vessel_outline, font=font)
 
     def _get_text_height(self, font: ImageFont.FreeTypeFont, text: str) -> int:
         """Calculate the pixel height of the given text with the provided font."""
@@ -315,6 +487,18 @@ def get_config_schema() -> ConfigSchema:
                 label="Map Cache Directory",
                 field_type=ConfigFieldType.STRING,
                 default="data",
+            ),
+            ConfigField(
+                key="vessel_fill_colour",
+                label="Vessel Fill Colour",
+                field_type=ConfigFieldType.COLOUR,
+                default="#FF0000",
+            ),
+            ConfigField(
+                key="vessel_outline_colour",
+                label="Vessel Outline Colour",
+                field_type=ConfigFieldType.COLOUR,
+                default="#000000",
             ),
         ],
     )
