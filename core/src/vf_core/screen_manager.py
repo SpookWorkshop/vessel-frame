@@ -44,10 +44,16 @@ class ScreenManager:
             self._logger.warning("No screens configured in plugins.screens")
             return
 
+        system_config = self._cm.get("SYSTEM") or {}
+
         for screen_name in configured_screens:
             try:
                 plugin_config = self._cm.get(screen_name)
                 kwargs = plugin_config if isinstance(plugin_config, dict) else {}
+
+                # Inject system-level values that screens might need
+                if "mapbox_api_key" not in kwargs:
+                    kwargs["mapbox_api_key"] = system_config.get("mapbox_api_key", "")
 
                 screen: ScreenPlugin = self._pm.create(
                     GROUP_SCREENS,
