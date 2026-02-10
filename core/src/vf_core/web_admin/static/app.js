@@ -304,7 +304,7 @@ class AdminPanel {
         );
     }
 
-    async saveSystemConfig(form) {
+    async saveSystemConfig(configKey, form) {
         const formData = new FormData(form);
         await this.saveConfig(
             '/api/system/',

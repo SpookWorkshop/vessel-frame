@@ -325,7 +325,7 @@ def get_config_schema() -> ConfigSchema:
         ConfigSchema: Schema describing this plugin's configuration options.
     """
     return ConfigSchema(
-        plugin_name="zone_screen",
+        plugin_name="table_screen",
         plugin_type="screen",
         fields=[
             ConfigField(

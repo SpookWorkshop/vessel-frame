@@ -206,6 +206,14 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     SCREEN_COUNT=$((SCREEN_COUNT + 1))
 fi
 
+read -p "Install Map Screen plugin? [Y/n] " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    pip install ./plugins/screens/map_screen
+    echo -e "${GREEN}Map Screen installed${NC}"
+    SCREEN_COUNT=$((SCREEN_COUNT + 1))
+fi
+
 # Ask about button controller
 echo ""
 read -p "Install Button Controller? (recommended if your device has physical buttons) [Y/n] " -n 1 -r
