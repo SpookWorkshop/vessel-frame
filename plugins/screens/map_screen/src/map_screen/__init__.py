@@ -1,32 +1,37 @@
+"""Map screen plugin for vessel-frame.
+
+Displays vessels over a map image. Downloads maps from Mapbox and caches locally
+"""
+
 from __future__ import annotations
+
 import asyncio
 import datetime
 import math
-from typing import Any
-from contextlib import suppress
-from PIL import Image, ImageDraw, ImageFont
-import logging
-from pathlib import Path
-import urllib.request
 import os
+import urllib.request
+from contextlib import suppress
+from pathlib import Path
+from typing import Any
 
+import logging
+from PIL import Image, ImageDraw, ImageFont
+
+from vf_core.asset_manager import AssetManager
 from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import (
     ConfigField,
     ConfigFieldType,
     ConfigSchema,
-    ScreenPlugin,
     RendererPlugin,
+    ScreenPlugin,
 )
-from vf_core.vessel_manager import VesselManager
-from vf_core.asset_manager import AssetManager
 from vf_core.render_strategies import PeriodicRenderStrategy
+from vf_core.vessel_manager import VesselManager
+
 
 class MapScreen(ScreenPlugin):
     """Screen to display a map of vessels which were recently observed."""
-
-    # Approximate metres per degree of latitude
-    METRES_PER_DEGREE_LAT = 111_320
 
     SCREEN_PADDING = 10
     CONTAINER_PADDING_HORZ = 20
@@ -45,10 +50,6 @@ class MapScreen(ScreenPlugin):
     SHIP_MIN_BEAM_PX = 6
     SHIP_MAX_BEAM_PX = 30
 
-    # Default ship dimensions if not provided (in metres)
-    DEFAULT_SHIP_LENGTH = 50
-    DEFAULT_SHIP_BEAM = 10
-
     # Marker size when drawing dots
     DOT_RADIUS = 5
 
@@ -61,10 +62,10 @@ class MapScreen(ScreenPlugin):
         asset_manager: AssetManager,
         in_topic: str = "vessel.updated",
         update_interval: float = 300.0,
-        bounds_tl_lat: float = 0.0,
-        bounds_tl_lon: float = 0.0,
-        bounds_br_lat: float = 0.0,
-        bounds_br_lon: float = 0.0,
+        min_lat: float = 0.0,
+        max_lat: float = 0.0,
+        min_lon: float = 0.0,
+        max_lon: float = 0.0,
         cache_dir: str = "data",
         map_style: str = "mapbox/light-v11",
         mapbox_api_key: str = "",
@@ -91,12 +92,11 @@ class MapScreen(ScreenPlugin):
         self._vessel_fill = vessel_fill_colour
         self._vessel_outline = vessel_outline_colour
 
-        # Store bounds as min/max for clarity since MapBox uses this terminology
-        # Top-left = (max_lat, min_lon), Bottom-right = (min_lat, max_lon)
-        self._max_lat = float(bounds_tl_lat) if isinstance(bounds_tl_lat, str) else bounds_tl_lat  # Northern boundary
-        self._min_lon = float(bounds_tl_lon) if isinstance(bounds_tl_lon, str) else bounds_tl_lon  # Western boundary
-        self._min_lat = float(bounds_br_lat) if isinstance(bounds_br_lat, str) else bounds_br_lat  # Southern boundary
-        self._max_lon = float(bounds_br_lon) if isinstance(bounds_br_lon, str) else bounds_br_lon  # Eastern boundary
+        # Parse bounds - handle string values from config
+        self._min_lat = float(min_lat) if isinstance(min_lat, str) else min_lat
+        self._max_lat = float(max_lat) if isinstance(max_lat, str) else max_lat
+        self._min_lon = float(min_lon) if isinstance(min_lon, str) else min_lon
+        self._max_lon = float(max_lon) if isinstance(max_lon, str) else max_lon
 
         # Ensure cache directory exists and download map images
         self._cache_dir.mkdir(parents=True, exist_ok=True)
@@ -105,6 +105,7 @@ class MapScreen(ScreenPlugin):
         self._map_portrait = self._load_map_image("map_portrait")
         self._map_landscape = self._load_map_image("map_landscape")
 
+        # Parse update interval
         interval = float(update_interval) if isinstance(update_interval, str) else update_interval
 
         self._fonts: dict[str, ImageFont.FreeTypeFont] = {
@@ -126,13 +127,11 @@ class MapScreen(ScreenPlugin):
         canvas = self._renderer.canvas
 
         orientations = [
-            ("map_portrait", f"{canvas.width}x{canvas.height}"),
-            ("map_landscape", f"{canvas.height}x{canvas.width}"),
+            ("map_portrait", canvas.width, canvas.height),
+            ("map_landscape", canvas.height, canvas.width),
         ]
 
-        bbox = f"[{self._min_lon},{self._min_lat},{self._max_lon},{self._max_lat}]"
-
-        for name, dimensions in orientations:
+        for name, width, height in orientations:
             img_path = self._cache_dir / name
             
             if img_path.exists():
@@ -144,9 +143,14 @@ class MapScreen(ScreenPlugin):
 
             self._logger.info(f"Downloading map image: {name}")
             try:
+                # Use bounds format for Mapbox API
+                bounds = (
+                    f"[{self._min_lon},{self._min_lat},"
+                    f"{self._max_lon},{self._max_lat}]"
+                )
                 url = (
                     f"https://api.mapbox.com/styles/v1/{self._map_style}/static/"
-                    f"{bbox}/{dimensions}?access_token={self._mapbox_key}"
+                    f"{bounds}/{width}x{height}?access_token={self._mapbox_key}"
                 )
                 self._logger.debug(f"Mapbox URL: {url}")
                 urllib.request.urlretrieve(url, img_path)
@@ -170,17 +174,6 @@ class MapScreen(ScreenPlugin):
         is_portrait = canvas.width < canvas.height
 
         return self._map_portrait if is_portrait else self._map_landscape
-
-    def _calculate_scale(self, height: int) -> float:
-        """Calculate metres per pixel based on current bounds and canvas height.
-        
-        Returns:
-            Metres per pixel for the current view.
-        """
-        lat_range = self._max_lat - self._min_lat
-        lat_range_metres = lat_range * self.METRES_PER_DEGREE_LAT
-
-        return lat_range_metres / height
 
     async def activate(self) -> None:
         """Start listening for updates and enable periodic rendering."""
@@ -216,13 +209,9 @@ class MapScreen(ScreenPlugin):
         draw = ImageDraw.Draw(canvas)
         width, height = canvas.size
 
-        self._logger.info("MAP SCREEN RENDERING")
-
         # Calculate current scale for ship rendering decisions
-        metres_per_pixel = self._calculate_scale(height)
+        metres_per_pixel = self._calculate_scale(width, height)
         use_shapes = self.SHAPE_MIN_SCALE <= metres_per_pixel <= self.SHAPE_MAX_SCALE
-
-        #self._logger.debug(f"Scale: {metres_per_pixel:.2f} m/px, use shapes: {use_shapes}")
 
         self._renderer.clear()
 
@@ -231,17 +220,15 @@ class MapScreen(ScreenPlugin):
         if current_map:
             canvas.paste(current_map)
 
-        # Draw header bar
-        self._draw_header_container(draw, width)
+        # Draw vessels
+        for vessel in vessels:
+            self._draw_vessel(draw, vessel, width, height, metres_per_pixel, use_shapes)
 
-        # Draw header content
+        # Header drawn last so it's on top of everything
+        self._draw_header_container(draw, width)
         text_x = self.SCREEN_PADDING + self.CONTAINER_PADDING_HORZ
         text_y = self.CONTAINER_PADDING_VERT
         self._draw_header(draw, text_x, text_y)
-
-        # Draw vessel markers
-        for vessel in vessels:
-            self._draw_vessel(draw, vessel, width, height, metres_per_pixel, use_shapes)
 
         await self._renderer.flush()
 
@@ -263,7 +250,7 @@ class MapScreen(ScreenPlugin):
         title_text = "Ship Tracker"
 
         subtitle_font = self._fonts["small"]
-        date_format = os.getenv('DATE_FORMAT', '%d/%m/%y')
+        date_format = os.getenv("DATE_FORMAT", "%d/%m/%y")
         subtitle_text = datetime.datetime.now().strftime(f"%A - {date_format} %H:%M")
         
         icon = self._icons["vessel"]
@@ -296,10 +283,20 @@ class MapScreen(ScreenPlugin):
             return
         if not (self._min_lon <= lon <= self._max_lon):
             return
+        
+        ship_stern = vessel.get("stern", 0)
+        ship_bow = vessel.get("bow", 0)
+        ship_port = vessel.get("port", 0)
+        ship_starboard = vessel.get("starboard", 0)
+
+        length = ship_stern + ship_bow
+        beam = ship_port + ship_starboard
+
+        use_shapes = use_shapes and length > 0 and beam > 0
 
         # Convert geographic coordinates to pixel position
         x = ((lon - self._min_lon) / (self._max_lon - self._min_lon)) * width
-        y = ((self._max_lat - lat) / (self._max_lat - self._min_lat)) * height
+        y = height - (((lat - self._min_lat) / (self._max_lat - self._min_lat)) * height)
 
         # Get heading (prefer true heading, fall back to COG)
         heading = vessel.get("true_heading") or vessel.get("heading")
@@ -311,7 +308,7 @@ class MapScreen(ScreenPlugin):
         has_valid_heading = heading is not None and heading != 360  # 360 = not available
         
         if use_shapes and has_valid_heading:
-            self._draw_vessel_shape(draw, vessel, x, y, heading, metres_per_pixel)
+            self._draw_vessel_shape(draw, x, y, length, beam, heading, metres_per_pixel)
         else:
             self._draw_vessel_dot(draw, x, y)
 
@@ -335,17 +332,14 @@ class MapScreen(ScreenPlugin):
     def _draw_vessel_shape(
         self,
         draw: ImageDraw.ImageDraw,
-        vessel: dict[str, Any],
         x: float,
         y: float,
+        length: int,
+        beam: int,
         heading: float,
         metres_per_pixel: float,
     ) -> None:
         """Draw a vessel as a pointed rectangle orientated by heading."""
-        # Get ship dimensions in metres, use defaults if not available
-        length = vessel.get("length") or self.DEFAULT_SHIP_LENGTH
-        beam = vessel.get("beam") or self.DEFAULT_SHIP_BEAM
-
         # Convert to pixels
         length_px = length / metres_per_pixel
         beam_px = beam / metres_per_pixel
@@ -358,19 +352,17 @@ class MapScreen(ScreenPlugin):
         # The bow point is at the top, stern is flat at the bottom
         half_length = length_px / 2
         half_beam = beam_px / 2
-        bow_length = length_px * 0.25  # Bow section is 25% of total length
+        bow_length = length_px * 0.25
 
         points = [
-            (0, -half_length),                           # Bow tip
-            (-half_beam, -half_length + bow_length),     # Port bow
-            (-half_beam, half_length),                   # Port stern
-            (half_beam, half_length),                    # Starboard stern
-            (half_beam, -half_length + bow_length),      # Starboard bow
+            (0, -half_length),
+            (-half_beam, -half_length + bow_length),
+            (-half_beam, half_length),
+            (half_beam, half_length),
+            (half_beam, -half_length + bow_length),
         ]
 
         # Rotate points by heading
-        # AIS heading: 0 = north, 90 = east, 180 = south, 270 = west
-        # We need to convert to radians and rotate clockwise
         heading_rad = math.radians(heading)
         rotated_points = []
         for px, py in points:
@@ -378,7 +370,7 @@ class MapScreen(ScreenPlugin):
             ry = px * math.sin(heading_rad) + py * math.cos(heading_rad)
             rotated_points.append((x + rx, y + ry))
 
-        # Draw the ship shape
+        # Draw the ship
         draw.polygon(
             rotated_points,
             fill=self._vessel_fill,
@@ -418,7 +410,6 @@ class MapScreen(ScreenPlugin):
 
         # Adjust if label would go off the right edge
         if label_x + text_width > width - self.SCREEN_PADDING:
-            # Place to the left instead
             label_x = x - self.DOT_RADIUS - 4 - text_width
 
         # Adjust if label would go off top or bottom
@@ -429,10 +420,34 @@ class MapScreen(ScreenPlugin):
 
         # Draw text with halo for readability
         halo_colour = self._palette.get("foreground", "#FFFFFF")
-        for dx, dy in [(-1, -1), (-1, 1), (1, -1), (1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)]:
+        for dx, dy in [(-1, -1),(-1, 1),(1, -1),(1, 1),(-1, 0),(1, 0),(0, -1),(0, 1),]:
             draw.text((label_x + dx, label_y + dy), name, fill=halo_colour, font=font)
-        
+
         draw.text((label_x, label_y), name, fill=self._vessel_outline, font=font)
+
+    def _calculate_scale(self, width: int, height: int) -> float:
+        """Calculate metres per pixel based on bounds and canvas dimensions.
+
+        Uses the centre latitude for the calculation.
+
+        Returns:
+            Metres per pixel for the current view.
+        """
+        # Approximate metres per degree
+        metres_per_degree_lat = 111_320
+        centre_lat = (self._min_lat + self._max_lat) / 2
+        metres_per_degree_lon = metres_per_degree_lat * math.cos(math.radians(centre_lat))
+
+        # Calculate the geographic span in metres
+        lat_range_metres = (self._max_lat - self._min_lat) * metres_per_degree_lat
+        lon_range_metres = (self._max_lon - self._min_lon) * metres_per_degree_lon
+
+        # Use the larger scale (more metres per pixel = more zoomed out)
+        # This ensures ship shapes don't get too large
+        scale_from_lat = lat_range_metres / height
+        scale_from_lon = lon_range_metres / width
+
+        return max(scale_from_lat, scale_from_lon)
 
     def _get_text_height(self, font: ImageFont.FreeTypeFont, text: str) -> int:
         """Calculate the pixel height of the given text with the provided font."""
@@ -453,28 +468,28 @@ def get_config_schema() -> ConfigSchema:
                 default=300.0,
             ),
             ConfigField(
-                key="bounds_tl_lat",
-                label="Top-Left Latitude (North)",
+                key="min_lat",
+                label="Minimum Latitude",
                 field_type=ConfigFieldType.FLOAT,
-                default=0.0,
+                default=53.35,
             ),
             ConfigField(
-                key="bounds_tl_lon",
-                label="Top-Left Longitude (West)",
+                key="max_lat",
+                label="Maximum Latitude",
                 field_type=ConfigFieldType.FLOAT,
-                default=0.0,
+                default=53.47,
             ),
             ConfigField(
-                key="bounds_br_lat",
-                label="Bottom-Right Latitude (South)",
+                key="min_lon",
+                label="Minimum Longitude",
                 field_type=ConfigFieldType.FLOAT,
-                default=0.0,
+                default=-3.10,
             ),
             ConfigField(
-                key="bounds_br_lon",
-                label="Bottom-Right Longitude (East)",
+                key="max_lon",
+                label="Maximum Longitude",
                 field_type=ConfigFieldType.FLOAT,
-                default=0.0,
+                default=-2.90,
             ),
             ConfigField(
                 key="map_style",
