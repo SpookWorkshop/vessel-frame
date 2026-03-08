@@ -48,7 +48,8 @@ class ZoneScreen(ScreenPlugin):
         zone_name: str = "Unknown",
         zone_lat: float = 0.0,
         zone_lon: float = 0.0,
-        zone_rad: float = 0.0
+        zone_rad: float = 0.0,
+        **kwargs
     ) -> None:
         self._logger = logging.getLogger(__name__)
 
