@@ -71,6 +71,7 @@ class MapScreen(ScreenPlugin):
         mapbox_api_key: str = "",
         vessel_fill_colour: str = "#FF0000",
         vessel_outline_colour: str = "#000000",
+        **kwargs
     ) -> None:
         self._logger = logging.getLogger(__name__)
 

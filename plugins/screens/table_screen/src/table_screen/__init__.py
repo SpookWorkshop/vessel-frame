@@ -1,7 +1,6 @@
 from __future__ import annotations
 import asyncio
 import datetime
-import math
 from typing import Any
 from contextlib import suppress
 from PIL import Image, ImageDraw, ImageFont
@@ -36,6 +35,7 @@ class TableScreen(ScreenPlugin):
         asset_manager: AssetManager,
         in_topic: str = "vessel.updated",
         update_interval: float = 30.0,
+        **kwargs
     ) -> None:
         self._logger = logging.getLogger(__name__)
 
