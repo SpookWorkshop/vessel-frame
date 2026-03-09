@@ -28,8 +28,8 @@ class ConfigUpdateResponse(BaseModel):
     value: Any
 
 
-@router.get("/")
-async def get_full_config(user: dict = Depends(verify_token), cm: ConfigManager = Depends(get_config_manager)):
+@router.get("/", dependencies=[Depends(verify_token)])
+async def get_full_config(cm: ConfigManager = Depends(get_config_manager)):
     """
     Return the entire config as a dictionary.
 
@@ -42,8 +42,8 @@ async def get_full_config(user: dict = Depends(verify_token), cm: ConfigManager 
     return cm.get_all()
 
 
-@router.get("/{path:path}", response_model=ConfigValueResponse)
-async def get_config_value(path: str, user: dict = Depends(verify_token), cm: ConfigManager = Depends(get_config_manager)):
+@router.get("/{path:path}", response_model=ConfigValueResponse, dependencies=[Depends(verify_token)])
+async def get_config_value(path: str, cm: ConfigManager = Depends(get_config_manager)):
     """
     Retrieve a specific config value by its path.
 
@@ -64,10 +64,9 @@ async def get_config_value(path: str, user: dict = Depends(verify_token), cm: Co
     return {"path": path, "value": value}
 
 
-@router.put("/", response_model=ConfigUpdateResponse)
+@router.put("/", response_model=ConfigUpdateResponse, dependencies=[Depends(verify_token)])
 async def update_config(
     update: ConfigUpdate,
-    user: dict = Depends(verify_token), 
     cm: ConfigManager = Depends(get_config_manager),
     pm: PluginManager = Depends(get_plugin_manager),
 ):

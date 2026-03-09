@@ -27,8 +27,8 @@ class ConfigUpdateResponse(BaseModel):
     value: Any
 
 
-@router.get("/")
-async def get_config(user: dict = Depends(verify_token), cm: ConfigManager = Depends(get_config_manager)):
+@router.get("/", dependencies=[Depends(verify_token)])
+async def get_config(cm: ConfigManager = Depends(get_config_manager)):
     """
     Return the system config as a dictionary.
 
@@ -41,10 +41,9 @@ async def get_config(user: dict = Depends(verify_token), cm: ConfigManager = Dep
     return cm.get("SYSTEM", {})
 
 
-@router.put("/", response_model=ConfigUpdateResponse)
+@router.put("/", response_model=ConfigUpdateResponse, dependencies=[Depends(verify_token)])
 async def update_config(
     update: ConfigUpdate,
-    user: dict = Depends(verify_token), 
     cm: ConfigManager = Depends(get_config_manager),
     pm: PluginManager = Depends(get_plugin_manager),
 ):
