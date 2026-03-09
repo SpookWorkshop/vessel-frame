@@ -213,6 +213,7 @@ async def run(argv: list[str] | None = None) -> int:
         logger.warning("No sources started")
 
     # Set up the renderer
+    sm: ScreenManager | None = None
     configured_renderers = config_manager.get("plugins.renderer", None)
     if configured_renderers is not None:
         # configured_renderers is an array to conform to the same patterns as other plugins
@@ -274,7 +275,8 @@ async def run(argv: list[str] | None = None) -> int:
             except Exception as e:
                 logger.exception("Error stopping controller")
 
-        await sm.stop()
+        if sm is not None:
+            await sm.stop()
         await bus.shutdown()
 
         logger.info("Shutdown complete.")
