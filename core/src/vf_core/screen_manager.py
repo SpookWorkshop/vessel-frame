@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from contextlib import suppress
 
 from vf_core.config_manager import ConfigManager
 from .message_bus import MessageBus
@@ -28,6 +29,7 @@ class ScreenManager:
         self._cm = cm
         self._asset_manager = asset_manager
         self._active_screen: ScreenPlugin | None = None
+        self._loop_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """
@@ -68,7 +70,7 @@ class ScreenManager:
             except Exception:
                 self._logger.exception(f"Failed to load screen '{screen_name}'")
 
-        asyncio.create_task(self._loop())
+        self._loop_task = asyncio.create_task(self._loop())
 
         if self._screens:
             self._active_screen = self._screens[0]
@@ -77,10 +79,15 @@ class ScreenManager:
             self._logger.warning("No screens loaded")
 
     async def stop(self) -> None:
-        """Deactivate the screen manager and any active screen.
+        """Stop the command loop and deactivate the active screen.
 
         Logs any exceptions raised during deactivation.
         """
+        if self._loop_task and not self._loop_task.done():
+            self._loop_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._loop_task
+
         if self._active_screen:
             try:
                 await self._active_screen.deactivate()

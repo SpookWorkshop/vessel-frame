@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from contextlib import suppress
 from functools import partial
 import logging
 import signal
@@ -250,10 +251,8 @@ async def run(argv: list[str] | None = None) -> int:
         logger.info("Stopping admin server...")
         if not admin_task.done():
             admin_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await admin_task
-            except asyncio.CancelledError:
-                pass
 
         # Cleanup all plugins
         logger.info("Stopping plugins...")
