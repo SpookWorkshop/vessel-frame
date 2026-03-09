@@ -4,7 +4,7 @@ import random
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin
+from vf_core.plugin_types import Plugin, require_plugin_args
 
 DEFAULT_MESSAGES = [
     "!AIVDM,1,1,,B,13P;lhP005wj=OrNShTenrj80@3Q,0*28",
@@ -71,9 +71,7 @@ class MockMessageSource(Plugin):
         min_delay: float = 0.5,
         max_delay: float = 5.0,
     ) -> None:
-        if bus is None:
-            raise ValueError("Mock Message Source requires MessageBus")
-
+        require_plugin_args(bus=bus)
         self.bus = bus
         self.topic = topic
         self.messages = messages or DEFAULT_MESSAGES

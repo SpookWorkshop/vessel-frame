@@ -6,7 +6,7 @@ import logging
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType
+from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 
 
 class COMMessageSource(Plugin):
@@ -20,12 +20,7 @@ class COMMessageSource(Plugin):
         baud_rate: int = 38400,
         port: str,
     ) -> None:
-        if bus is None:
-            raise ValueError("COM Message Source requires MessageBus")
-
-        if port is None:
-            raise ValueError("COM Message Source requires port")
-
+        require_plugin_args(bus=bus, port=port)
         self._logger = logging.getLogger(__name__)
         self.bus = bus
         self.topic = topic

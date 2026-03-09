@@ -25,6 +25,7 @@ from vf_core.plugin_types import (
     ConfigSchema,
     RendererPlugin,
     ScreenPlugin,
+    require_plugin_args,
 )
 from vf_core.render_strategies import PeriodicRenderStrategy
 from vf_core.vessel_manager import VesselManager
@@ -72,6 +73,7 @@ class MapScreen(ScreenPlugin):
         vessel_fill_colour: str = "#FF0000",
         vessel_outline_colour: str = "#000000",
     ) -> None:
+        require_plugin_args(bus=bus, renderer=renderer, vm=vm, asset_manager=asset_manager)
         self._logger = logging.getLogger(__name__)
 
         self._bus = bus

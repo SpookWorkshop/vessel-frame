@@ -3,7 +3,7 @@ import asyncio
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin
+from vf_core.plugin_types import Plugin, require_plugin_args
 from pyais.queue import NMEAQueue
 from pyais.stream import TagBlockQueue
 import logging
@@ -20,13 +20,11 @@ class AISDecoderProcessor(Plugin):
     def __init__(
         self,
         *,
-        bus: MessageBus = None,
+        bus: MessageBus,
         in_topic: str = "ais.raw",
         out_topic: str = "ais.decoded",
     ) -> None:
-        if bus is None:
-            raise ValueError("AIS Decoder Processor requires MessageBus")
-
+        require_plugin_args(bus=bus)
         self._logger = logging.getLogger(__name__)
 
         tbq: TagBlockQueue = TagBlockQueue()

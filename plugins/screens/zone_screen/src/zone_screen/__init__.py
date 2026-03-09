@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import logging
 
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin
+from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin, require_plugin_args
 from vf_core.vessel_manager import VesselManager
 from vf_core.asset_manager import AssetManager
 from vf_core.ais_utils import get_vessel_full_type_name
@@ -50,6 +50,7 @@ class ZoneScreen(ScreenPlugin):
         zone_lon: float = 0.0,
         zone_rad: float = 0.0
     ) -> None:
+        require_plugin_args(bus=bus, renderer=renderer, vm=vm, asset_manager=asset_manager)
         self._logger = logging.getLogger(__name__)
 
         self._bus = bus
