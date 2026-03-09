@@ -2,6 +2,8 @@ import asyncio
 from collections import defaultdict
 from typing import Any, AsyncIterator
 
+_SHUTDOWN = object()
+
 
 class MessageBus:
     """
@@ -64,6 +66,8 @@ class MessageBus:
         try:
             while True:
                 msg = await q.get()
+                if msg is _SHUTDOWN:
+                    return
                 yield msg
         finally:
             async with self._lock:
@@ -75,12 +79,22 @@ class MessageBus:
 
     async def shutdown(self) -> None:
         """
-        Shut down the message bus and clear all active subscriptions.
+        Shut down the message bus and unblock all active subscribers.
 
-        Removes all subscriber queues and releases resources. Any later attempts
-        by existing subscribers to unsubscribe will be safely ignored.
+        Delivers a shutdown sentinel to every waiting queue so that subscribers
+        exit their receive loop cleanly without needing to be externally cancelled.
+        Clears all subscriptions afterwards.
 
         This method is thread-safe.
         """
         async with self._lock:
+            for queues in self._subs.values():
+                for q in queues:
+                    # Guarantee the sentinel fits by clearing the queue first
+                    while not q.empty():
+                        try:
+                            q.get_nowait()
+                        except asyncio.QueueEmpty:
+                            break
+                    q.put_nowait(_SHUTDOWN)
             self._subs.clear()
