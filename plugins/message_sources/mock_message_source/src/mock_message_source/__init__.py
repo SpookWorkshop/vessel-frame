@@ -72,11 +72,11 @@ class MockMessageSource(Plugin):
         max_delay: float = 5.0,
     ) -> None:
         require_plugin_args(bus=bus)
-        self.bus = bus
-        self.topic = topic
-        self.messages = messages or DEFAULT_MESSAGES
-        self.min_delay = min_delay
-        self.max_delay = max_delay
+        self._bus = bus
+        self._topic = topic
+        self._messages = messages or DEFAULT_MESSAGES
+        self._min_delay = min_delay
+        self._max_delay = max_delay
         self._task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -104,10 +104,10 @@ class MockMessageSource(Plugin):
         idx = 0
 
         while True:
-            await self.bus.publish(self.topic, self.messages[idx])
+            await self._bus.publish(self._topic, self._messages[idx])
 
-            idx = (idx + 1) % len(self.messages)
-            await asyncio.sleep(random.uniform(self.min_delay, self.max_delay))
+            idx = (idx + 1) % len(self._messages)
+            await asyncio.sleep(random.uniform(self._min_delay, self._max_delay))
 
 
 def make_plugin(**kwargs: Any) -> Plugin:
