@@ -72,12 +72,9 @@ class ConfigManager:
         value = self._cfg
 
         for k in keys:
-            if isinstance(value, dict):
-                value = value.get(k)
-                if value is None:
-                    return default
-            else:
+            if not isinstance(value, dict) or k not in value:
                 return default
+            value = value[k]
 
         return copy.deepcopy(value)
 
