@@ -17,6 +17,9 @@ class AISDecoderProcessor(Plugin):
     from an input topic and fed into an internal queue. A separate task
     decodes and publishes dictionaries to the output topic.
     """
+
+    _DECODE_BATCH_SIZE: int = 10
+
     def __init__(
         self,
         *,
@@ -84,8 +87,6 @@ class AISDecoderProcessor(Plugin):
         (with errors ignored) prior to publishing on the output topic.
         """
 
-        BATCH_SIZE = 10
-
         try:
             while True:
                 messages_processed = 0
@@ -103,14 +104,12 @@ class AISDecoderProcessor(Plugin):
                         msg_type = decoded_sentence.get('msg_type')
                         mmsi = decoded_sentence.get('mmsi')
                         
-                        # Log ALL decoded messages with their type
-                        self._logger.info(f"Decoded: Type {msg_type}, MMSI {mmsi}")
+                        self._logger.debug(f"Decoded: Type {msg_type}, MMSI {mmsi}")
 
-                        for key, value in decoded_sentence.items():
-                            if isinstance(value, bytes):
-                                decoded_sentence[key] = value.decode(
-                                    "utf-8", errors="ignore"
-                                )
+                        decoded_sentence = {
+                            key: val.decode("utf-8", errors="ignore") if isinstance(val, bytes) else val
+                            for key, val in decoded_sentence.items()
+                        }
 
                         await self._bus.publish(self._out_topic, decoded_sentence)
                     except Exception:
@@ -118,7 +117,7 @@ class AISDecoderProcessor(Plugin):
 
                     messages_processed += 1
 
-                    if messages_processed >= BATCH_SIZE:
+                    if messages_processed >= self._DECODE_BATCH_SIZE:
                         await asyncio.sleep(0)
                         messages_processed = 0
 
