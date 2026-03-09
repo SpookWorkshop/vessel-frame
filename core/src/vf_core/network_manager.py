@@ -167,7 +167,7 @@ class NetworkManager:
                         if "Signal level=" in line:
                             signal = line.split("Signal level=")[1].split()[0]
                             current_network["signal"] = signal
-                    except:
+                    except (IndexError, ValueError):
                         pass
 
                 elif "Encryption key:" in line:
@@ -260,8 +260,8 @@ class NetworkManager:
                 )
                 ip_addresses = result.stdout.strip().split()
                 status["ip_address"] = ip_addresses[0] if ip_addresses else None
-            except:
-                pass
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+                self._logger.debug(f"Could not retrieve client network details: {e}")
 
         return status
 
