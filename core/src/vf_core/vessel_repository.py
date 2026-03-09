@@ -156,9 +156,13 @@ class VesselRepository:
             dict[str, Any] | None: A dictionary containing total, identified,
             unknown, and percent_identified fields, or None if an error occurred.
         """
+        if not self._db_conn:
+            self._logger.error("Database not connected")
+            return None
+
         try:
             cursor = await self._db_conn.execute("""
-                SELECT 
+                SELECT
                     COUNT(*) as total,
                     SUM(CASE WHEN has_static_data = 1 THEN 1 ELSE 0 END) as identified,
                     SUM(CASE WHEN has_static_data = 0 THEN 1 ELSE 0 END) as unknown
