@@ -45,12 +45,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     Returns:
         argparse.Namespace: Parsed arguments.
     """
-    p = argparse.ArgumentParser(prog="vessel-frame")
-    p.add_argument("--config", type=Path, default=Path("config.toml"))
-    p.add_argument("--db", type=Path, default=Path("db.sqlite"))
-    p.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR")
-    p.add_argument("--log-path", type=Path, default=Path("vessel_frame.log"))
-    return p.parse_args(argv)
+    parser = argparse.ArgumentParser(prog="vessel-frame")
+    parser.add_argument("--config", type=Path, default=Path("config.toml"))
+    parser.add_argument("--db", type=Path, default=Path("db.sqlite"))
+    parser.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR")
+    parser.add_argument("--log-path", type=Path, default=Path("vessel_frame.log"))
+    return parser.parse_args(argv)
 
 
 def _log_admin_status(
@@ -113,7 +113,7 @@ def _init_logger(level: str, log_path: Path):
 
 async def _init_plugins(
     config_manager: ConfigManager,
-    pm: PluginManager,
+    plugin_manager: PluginManager,
     bus: MessageBus,
     plugin_type: str,
     entry_point_group: str,
@@ -127,7 +127,7 @@ async def _init_plugins(
 
     Args:
         config_manager (ConfigManager): Source of plugin configuration.
-        pm (PluginManager): Used to create plugin instances from entry points.
+        plugin_manager (PluginManager): Used to create plugin instances from entry points.
         bus (MessageBus): Injected into each plugin's constructor kwargs.
         plugin_type (str): The category to load the plugin from " (e.g., "sources", "processors").
         entry_point_group (str): The Python entry point group to resolve.
@@ -146,12 +146,12 @@ async def _init_plugins(
             kwargs = plugin_config if isinstance(plugin_config, dict) else {}
             kwargs["bus"] = bus
 
-            plugin = pm.create(entry_point_group, plugin_name, **kwargs)
+            plugin = plugin_manager.create(entry_point_group, plugin_name, **kwargs)
             await plugin.start()
             plugins.append(plugin)
 
             logger.info(f"Started plugin '{plugin_name}' ({plugin_type})")
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to start plugin '{plugin_name}' ({plugin_type})")
 
     return plugins
@@ -175,9 +175,9 @@ async def run(argv: list[str] | None = None) -> int:
     stop_event = asyncio.Event()
     config_manager = ConfigManager(args.config)
     bus = MessageBus()
-    pm = PluginManager()
+    plugin_manager = PluginManager()
     vessel_repo = VesselRepository(args.db)
-    vm = VesselManager(bus, vessel_repo, in_topic="ais.decoded")
+    vessel_manager = VesselManager(bus, vessel_repo, in_topic="ais.decoded")
     network_manager = NetworkManager()
     asset_manager = AssetManager(Path(__file__).parent / "assets")
 
@@ -187,7 +187,7 @@ async def run(argv: list[str] | None = None) -> int:
         logger.exception(f"Failed to load config from {args.config}")
         return 1
 
-    admin_task = asyncio.create_task(start_admin_server(config_manager, pm, network_manager, host="0.0.0.0"))
+    admin_task = asyncio.create_task(start_admin_server(config_manager, plugin_manager, network_manager, host="0.0.0.0"))
     admin_task.add_done_callback(
         partial(_log_admin_status, stop_event=stop_event, logger=logger)
     )
@@ -197,23 +197,23 @@ async def run(argv: list[str] | None = None) -> int:
     processors: list[Plugin] = []
 
     await vessel_repo.start()
-    await vm.start()
+    await vessel_manager.start()
 
     sources = await _init_plugins(
-        config_manager, pm, bus, "sources", GROUP_SOURCES, logger
+        config_manager, plugin_manager, bus, "sources", GROUP_SOURCES, logger
     )
     processors = await _init_plugins(
-        config_manager, pm, bus, "processors", GROUP_PROCESSORS, logger
+        config_manager, plugin_manager, bus, "processors", GROUP_PROCESSORS, logger
     )
     controllers = await _init_plugins(
-        config_manager, pm, bus, "controllers", GROUP_CONTROLLERS, logger
+        config_manager, plugin_manager, bus, "controllers", GROUP_CONTROLLERS, logger
     )
 
     if not sources:
         logger.warning("No sources started")
 
     # Set up the renderer
-    sm: ScreenManager | None = None
+    screen_manager: ScreenManager | None = None
     configured_renderers = config_manager.get("plugins.renderer", None)
     if configured_renderers is not None:
         # configured_renderers is an array to conform to the same patterns as other plugins
@@ -221,12 +221,12 @@ async def run(argv: list[str] | None = None) -> int:
         configured_renderer = configured_renderers[0]
         renderer_config = config_manager.get(configured_renderer)
         kwargs = renderer_config if isinstance(renderer_config, dict) else {}
-        renderer: RendererPlugin = pm.create(
+        renderer: RendererPlugin = plugin_manager.create(
             GROUP_RENDERER, configured_renderer, **kwargs
         )
 
-        sm = ScreenManager(bus, pm, renderer, vm, cm=config_manager, asset_manager=asset_manager)
-        await sm.start()
+        screen_manager = ScreenManager(bus, plugin_manager, renderer, vessel_manager, cm=config_manager, asset_manager=asset_manager)
+        await screen_manager.start()
     else:
         logger.warning("No renderer created")
 
@@ -244,7 +244,7 @@ async def run(argv: list[str] | None = None) -> int:
     finally:
         logger.info("Shutting down...")
         await vessel_repo.stop()
-        await vm.stop()
+        await vessel_manager.stop()
 
         # Stop the admin server
         logger.info("Stopping admin server...")
@@ -275,8 +275,8 @@ async def run(argv: list[str] | None = None) -> int:
             except Exception as e:
                 logger.exception("Error stopping controller")
 
-        if sm is not None:
-            await sm.stop()
+        if screen_manager is not None:
+            await screen_manager.stop()
         await bus.shutdown()
 
         logger.info("Shutdown complete.")
