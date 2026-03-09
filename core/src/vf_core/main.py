@@ -27,6 +27,7 @@ from .screen_manager import ScreenManager
 from .network_manager import NetworkManager
 from .asset_manager import AssetManager
 from .web_admin.main import start_admin_server
+from .web_admin import auth
 
 """
 Vessel Frame
@@ -49,6 +50,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="vessel-frame")
     parser.add_argument("--config", type=Path, default=Path("config.toml"))
     parser.add_argument("--db", type=Path, default=Path("db.sqlite"))
+    parser.add_argument("--data-dir", type=Path, default=Path("/var/lib/vessel-frame"))
     parser.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR")
     parser.add_argument("--log-path", type=Path, default=Path("vessel_frame.log"))
     return parser.parse_args(argv)
@@ -119,6 +121,7 @@ async def _init_plugins(
     plugin_type: str,
     entry_point_group: str,
     logger: logging.Logger,
+    data_dir: Path,
 ) -> list[Plugin]:
     """
     Instantiate and start plugins of a given type from configuration.
@@ -146,6 +149,7 @@ async def _init_plugins(
             plugin_config = config_manager.get(plugin_name)
             kwargs = plugin_config if isinstance(plugin_config, dict) else {}
             kwargs["bus"] = bus
+            kwargs["data_dir"] = data_dir
 
             plugin = plugin_manager.create(entry_point_group, plugin_name, **kwargs)
             await plugin.start()
@@ -182,6 +186,8 @@ async def run(argv: list[str] | None = None) -> int:
     network_manager = NetworkManager()
     asset_manager = AssetManager(Path(__file__).parent / "assets")
 
+    auth.init(args.data_dir)
+
     try:
         config_manager.load()
     except Exception as e:
@@ -201,13 +207,13 @@ async def run(argv: list[str] | None = None) -> int:
     await vessel_manager.start()
 
     sources = await _init_plugins(
-        config_manager, plugin_manager, bus, "sources", GROUP_SOURCES, logger
+        config_manager, plugin_manager, bus, "sources", GROUP_SOURCES, logger, args.data_dir
     )
     processors = await _init_plugins(
-        config_manager, plugin_manager, bus, "processors", GROUP_PROCESSORS, logger
+        config_manager, plugin_manager, bus, "processors", GROUP_PROCESSORS, logger, args.data_dir
     )
     controllers = await _init_plugins(
-        config_manager, plugin_manager, bus, "controllers", GROUP_CONTROLLERS, logger
+        config_manager, plugin_manager, bus, "controllers", GROUP_CONTROLLERS, logger, args.data_dir
     )
 
     if not sources:
@@ -222,11 +228,12 @@ async def run(argv: list[str] | None = None) -> int:
         configured_renderer = configured_renderers[0]
         renderer_config = config_manager.get(configured_renderer)
         kwargs = renderer_config if isinstance(renderer_config, dict) else {}
+        kwargs["data_dir"] = args.data_dir
         renderer: RendererPlugin = plugin_manager.create(
             GROUP_RENDERER, configured_renderer, **kwargs
         )
 
-        screen_manager = ScreenManager(bus, plugin_manager, renderer, vessel_manager, cm=config_manager, asset_manager=asset_manager)
+        screen_manager = ScreenManager(bus, plugin_manager, renderer, vessel_manager, cm=config_manager, asset_manager=asset_manager, data_dir=args.data_dir)
         await screen_manager.start()
     else:
         logger.warning("No renderer created")

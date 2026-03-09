@@ -67,7 +67,7 @@ class MapScreen(ScreenPlugin):
         max_lat: float = 0.0,
         min_lon: float = 0.0,
         max_lon: float = 0.0,
-        cache_dir: str = "data",
+        data_dir: Path,
         map_style: str = "mapbox/light-v11",
         mapbox_api_key: str = "",
         vessel_fill_colour: str = "#FF0000",
@@ -84,7 +84,7 @@ class MapScreen(ScreenPlugin):
         self._task: asyncio.Task[None] | None = None
         self._palette = renderer.palette
         self._map_style = map_style
-        self._cache_dir = Path(cache_dir)
+        self._cache_dir = data_dir / "map_cache"
         self._mapbox_key = mapbox_api_key
 
         if len(self._mapbox_key) == 0:
@@ -498,12 +498,6 @@ def get_config_schema() -> ConfigSchema:
                 label="Map Style",
                 field_type=ConfigFieldType.STRING,
                 default="mapbox/light-v11",
-            ),
-            ConfigField(
-                key="cache_dir",
-                label="Map Cache Directory",
-                field_type=ConfigFieldType.STRING,
-                default="data",
             ),
             ConfigField(
                 key="vessel_fill_colour",

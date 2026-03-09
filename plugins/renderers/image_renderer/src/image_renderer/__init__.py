@@ -18,12 +18,12 @@ class ImageRenderer(RendererPlugin):
     def __init__(
         self,
         *,
-        out_path: str = "data/image.png",
+        data_dir: Path,
         width: int = 480,
         height: int = 800,
         orientation: str = "portrait",
     ) -> None:
-        self._out_path = out_path
+        self._out_path = data_dir / "image.png"
         self._orientation = orientation
 
         # Swap width and height if they weren't passed in a way that expresses the orientation
@@ -37,12 +37,11 @@ class ImageRenderer(RendererPlugin):
             self._height = int(height)
 
         self._canvas: Image.Image = Image.new("RGB", (self._width, self._height))
-        path = Path(out_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        self._out_path.parent.mkdir(parents=True, exist_ok=True)
 
     async def flush(self) -> None:
         """Save the current canvas to the configured output path."""
-        self.canvas.save(self._out_path, "png")
+        self.canvas.save(str(self._out_path), "png")
 
     def clear(self) -> None:
         """Clear the canvas by filling it with the background colour."""
@@ -93,13 +92,6 @@ def get_config_schema() -> ConfigSchema:
         plugin_type="renderer",
         fields=[
             ConfigField(
-                key="out_path",
-                label="File Path",
-                field_type=ConfigFieldType.STRING,
-                default="data/image.png",
-                description="File output path",
-            ),
-            ConfigField(
                 key="width",
                 label="Width",
                 field_type=ConfigFieldType.INTEGER,
@@ -128,5 +120,4 @@ def make_plugin(**kwargs: Any) -> RendererPlugin:
     """
     Factory function required by the entry point.
     """
-
     return ImageRenderer(**kwargs)

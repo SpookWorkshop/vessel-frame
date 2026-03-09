@@ -2,6 +2,8 @@ import asyncio
 import logging
 from contextlib import suppress
 
+from pathlib import Path
+
 from vf_core.config_manager import ConfigManager
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
@@ -19,6 +21,7 @@ class ScreenManager:
         vm: VesselManager,
         cm: ConfigManager,
         asset_manager: AssetManager,
+        data_dir: Path,
     ) -> None:
         self._logger = logging.getLogger(__name__)
         self._bus = bus
@@ -28,6 +31,7 @@ class ScreenManager:
         self._vm = vm
         self._cm = cm
         self._asset_manager = asset_manager
+        self._data_dir = data_dir
         self._active_screen: ScreenPlugin | None = None
         self._loop_task: asyncio.Task | None = None
 
@@ -63,6 +67,7 @@ class ScreenManager:
                     vm=self._vm,
                     bus=self._bus,
                     asset_manager=self._asset_manager,
+                    data_dir=self._data_dir,
                     **kwargs
                 )
                 self._screens.append(screen)

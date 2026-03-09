@@ -6,7 +6,20 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-AUTH_DATA_PATH = Path("data/.secrets/admin_auth.json")
+_auth_data_path: Path | None = None
+
+
+def init(data_dir: Path) -> None:
+    """Initialise the auth module with the application data directory."""
+    global _auth_data_path
+    _auth_data_path = data_dir / ".secrets" / "admin_auth.json"
+
+
+def _get_auth_data_path() -> Path:
+    if _auth_data_path is None:
+        raise RuntimeError("auth module not initialised — call auth.init(data_dir) first")
+    return _auth_data_path
+
 
 def get_or_create_secret_key() -> str:
     """Get or generate JWT secret key."""
@@ -50,23 +63,25 @@ def is_admin_configured() -> bool:
 
 def _load_auth_data() -> dict:
     """Load auth data from file."""
-    if AUTH_DATA_PATH.exists():
+    path = _get_auth_data_path()
+    if path.exists():
         try:
-            return json.loads(AUTH_DATA_PATH.read_text())
+            return json.loads(path.read_text())
         except Exception:
             logger.exception("Failed to read auth data")
             return {}
-    
+
     return {}
 
 def _save_auth_data(data: dict) -> None:
     """Save auth data to file."""
+    path = _get_auth_data_path()
     try:
-        AUTH_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-        AUTH_DATA_PATH.write_text(json.dumps(data, indent=2))
-        
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2))
+
         try:
-            AUTH_DATA_PATH.chmod(0o600)
+            path.chmod(0o600)
         except Exception:
             pass  # Windows doesn't support chmod
     except Exception:
