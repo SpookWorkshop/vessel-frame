@@ -190,7 +190,7 @@ async def run(argv: list[str] | None = None) -> int:
 
     try:
         config_manager.load()
-    except Exception as e:
+    except Exception:
         logger.exception(f"Failed to load config from {args.config}")
         return 1
 
@@ -266,19 +266,19 @@ async def run(argv: list[str] | None = None) -> int:
         for source in sources:
             try:
                 await source.stop()
-            except Exception as e:
+            except Exception:
                 logger.exception("Error stopping source")
 
         for processor in processors:
             try:
                 await processor.stop()
-            except Exception as e:
+            except Exception:
                 logger.exception("Error stopping processor")
 
-        for processor in controllers:
+        for controller in controllers:
             try:
-                await processor.stop()
-            except Exception as e:
+                await controller.stop()
+            except Exception:
                 logger.exception("Error stopping controller")
 
         if screen_manager is not None:
