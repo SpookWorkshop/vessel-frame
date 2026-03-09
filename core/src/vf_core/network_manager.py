@@ -114,7 +114,7 @@ class NetworkManager:
         Returns:
             List of dicts containing network info
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.scan_networks)
 
     def scan_networks(self) -> List[Dict[str, any]]:

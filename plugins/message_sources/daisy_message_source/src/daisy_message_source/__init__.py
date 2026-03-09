@@ -127,7 +127,7 @@ class DaisyMessageSource(Plugin):
     async def _loop(self) -> None:
         """Continuously read from I2C and publish complete messages."""
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             
             # Open I2C bus
             self._i2c = await loop.run_in_executor(
