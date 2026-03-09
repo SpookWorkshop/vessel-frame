@@ -107,7 +107,7 @@ class ZoneScreen(ScreenPlugin):
                 self._logger.info("Zone Screen Update")
                 if vessel and self._is_valid_vessel(vessel):
                     self._current_vessel = vessel
-                    await self._render_strategy.request_render()
+                    self._render_strategy.request_render()
         except asyncio.CancelledError:
             raise
         except Exception as e:

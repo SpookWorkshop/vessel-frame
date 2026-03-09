@@ -91,7 +91,7 @@ class TableScreen(ScreenPlugin):
 
         try:
             async for msg in self._bus.subscribe(self._in_topic):
-                await self._render_strategy.request_render()
+                self._render_strategy.request_render()
         except asyncio.CancelledError:
             # Expected on deactivate
             raise

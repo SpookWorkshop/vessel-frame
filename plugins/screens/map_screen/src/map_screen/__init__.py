@@ -197,7 +197,7 @@ class MapScreen(ScreenPlugin):
         """Internal loop that receives update events and requests renders."""
         try:
             async for _ in self._bus.subscribe(self._in_topic):
-                await self._render_strategy.request_render()
+                self._render_strategy.request_render()
         except asyncio.CancelledError:
             raise
         except Exception:
