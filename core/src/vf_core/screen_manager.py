@@ -28,7 +28,6 @@ class ScreenManager:
         self._cm = cm
         self._asset_manager = asset_manager
         self._active_screen: ScreenPlugin | None = None
-        self._current_screen_index: int = 0
 
     async def start(self) -> None:
         """
@@ -72,7 +71,7 @@ class ScreenManager:
         asyncio.create_task(self._loop())
 
         if self._screens:
-            self._active_screen = self._screens[self._current_screen_index]
+            self._active_screen = self._screens[0]
             await self._active_screen.activate()
         else:
             self._logger.warning("No screens loaded")
@@ -102,26 +101,24 @@ class ScreenManager:
         """Switch to next screen."""
         if not self._screens or len(self._screens) <= 1:
             return
-        
-        next_index = (self._current_screen_index + 1) % len(self._screens)
-        await self._switch_to_screen(next_index)
-    
+
+        current_index = self._screens.index(self._active_screen)
+        await self._switch_to_screen((current_index + 1) % len(self._screens))
+
     async def _previous_screen(self):
         """Switch to previous screen."""
         if not self._screens or len(self._screens) <= 1:
             return
-        
-        next_index = (self._current_screen_index - 1) % len(self._screens)
-        await self._switch_to_screen(next_index)
+
+        current_index = self._screens.index(self._active_screen)
+        await self._switch_to_screen((current_index - 1) % len(self._screens))
 
     async def _switch_to_screen(self, target_index: int):
-        """Switch to a specific screen"""
-        
+        """Switch to a specific screen."""
         self._logger.info(
-            f"Switching from screen {self._current_screen_index} to {target_index}"
+            f"Switching from '{type(self._active_screen).__name__}' to '{type(self._screens[target_index]).__name__}'"
         )
-        
-        # Change the active screen
-        await self._screens[self._current_screen_index].deactivate()
-        self._current_screen_index = target_index
-        await self._screens[self._current_screen_index].activate()
+
+        await self._active_screen.deactivate()
+        self._active_screen = self._screens[target_index]
+        await self._active_screen.activate()
