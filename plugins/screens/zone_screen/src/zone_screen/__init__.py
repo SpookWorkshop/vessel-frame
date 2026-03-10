@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import logging
 
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin
+from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin, require_plugin_args
 from vf_core.vessel_manager import VesselManager
 from vf_core.asset_manager import AssetManager
 from vf_core.ais_utils import get_vessel_full_type_name
@@ -49,8 +49,9 @@ class ZoneScreen(ScreenPlugin):
         zone_lat: float = 0.0,
         zone_lon: float = 0.0,
         zone_rad: float = 0.0,
-        **kwargs
+        **kwargs: Any,
     ) -> None:
+        require_plugin_args(bus=bus, renderer=renderer, vm=vm, asset_manager=asset_manager)
         self._logger = logging.getLogger(__name__)
 
         self._bus = bus
@@ -107,7 +108,7 @@ class ZoneScreen(ScreenPlugin):
                 self._logger.info("Zone Screen Update")
                 if vessel and self._is_valid_vessel(vessel):
                     self._current_vessel = vessel
-                    await self._render_strategy.request_render()
+                    self._render_strategy.request_render()
         except asyncio.CancelledError:
             raise
         except Exception as e:

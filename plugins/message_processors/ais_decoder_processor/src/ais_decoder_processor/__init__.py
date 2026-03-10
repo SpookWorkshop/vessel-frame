@@ -3,7 +3,7 @@ import asyncio
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin
+from vf_core.plugin_types import Plugin, require_plugin_args
 from pyais.queue import NMEAQueue
 from pyais.stream import TagBlockQueue
 import logging
@@ -17,16 +17,18 @@ class AISDecoderProcessor(Plugin):
     from an input topic and fed into an internal queue. A separate task
     decodes and publishes dictionaries to the output topic.
     """
+
+    _DECODE_BATCH_SIZE: int = 10
+
     def __init__(
         self,
         *,
-        bus: MessageBus = None,
+        bus: MessageBus,
         in_topic: str = "ais.raw",
         out_topic: str = "ais.decoded",
+        **kwargs: Any,
     ) -> None:
-        if bus is None:
-            raise ValueError("AIS Decoder Processor requires MessageBus")
-
+        require_plugin_args(bus=bus)
         self._logger = logging.getLogger(__name__)
 
         tbq: TagBlockQueue = TagBlockQueue()
@@ -86,8 +88,6 @@ class AISDecoderProcessor(Plugin):
         (with errors ignored) prior to publishing on the output topic.
         """
 
-        BATCH_SIZE = 10
-
         try:
             while True:
                 messages_processed = 0
@@ -105,14 +105,12 @@ class AISDecoderProcessor(Plugin):
                         msg_type = decoded_sentence.get('msg_type')
                         mmsi = decoded_sentence.get('mmsi')
                         
-                        # Log ALL decoded messages with their type
-                        self._logger.info(f"Decoded: Type {msg_type}, MMSI {mmsi}")
+                        self._logger.debug(f"Decoded: Type {msg_type}, MMSI {mmsi}")
 
-                        for key, value in decoded_sentence.items():
-                            if isinstance(value, bytes):
-                                decoded_sentence[key] = value.decode(
-                                    "utf-8", errors="ignore"
-                                )
+                        decoded_sentence = {
+                            key: val.decode("utf-8", errors="ignore") if isinstance(val, bytes) else val
+                            for key, val in decoded_sentence.items()
+                        }
 
                         await self._bus.publish(self._out_topic, decoded_sentence)
                     except Exception:
@@ -120,7 +118,7 @@ class AISDecoderProcessor(Plugin):
 
                     messages_processed += 1
 
-                    if messages_processed >= BATCH_SIZE:
+                    if messages_processed >= self._DECODE_BATCH_SIZE:
                         await asyncio.sleep(0)
                         messages_processed = 0
 

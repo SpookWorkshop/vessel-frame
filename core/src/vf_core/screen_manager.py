@@ -1,5 +1,8 @@
 import asyncio
 import logging
+from contextlib import suppress
+
+from pathlib import Path
 
 from vf_core.config_manager import ConfigManager
 from .message_bus import MessageBus
@@ -18,6 +21,7 @@ class ScreenManager:
         vm: VesselManager,
         cm: ConfigManager,
         asset_manager: AssetManager,
+        data_dir: Path,
     ) -> None:
         self._logger = logging.getLogger(__name__)
         self._bus = bus
@@ -27,8 +31,9 @@ class ScreenManager:
         self._vm = vm
         self._cm = cm
         self._asset_manager = asset_manager
+        self._data_dir = data_dir
         self._active_screen: ScreenPlugin | None = None
-        self._current_screen_index: int = 0
+        self._loop_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """
@@ -62,6 +67,7 @@ class ScreenManager:
                     vm=self._vm,
                     bus=self._bus,
                     asset_manager=self._asset_manager,
+                    data_dir=self._data_dir,
                     **kwargs
                 )
                 self._screens.append(screen)
@@ -69,19 +75,24 @@ class ScreenManager:
             except Exception:
                 self._logger.exception(f"Failed to load screen '{screen_name}'")
 
-        asyncio.create_task(self._loop())
+        self._loop_task = asyncio.create_task(self._loop())
 
         if self._screens:
-            self._active_screen = self._screens[self._current_screen_index]
+            self._active_screen = self._screens[0]
             await self._active_screen.activate()
         else:
             self._logger.warning("No screens loaded")
 
     async def stop(self) -> None:
-        """Deactivate the screen manager and any active screen.
+        """Stop the command loop and deactivate the active screen.
 
         Logs any exceptions raised during deactivation.
         """
+        if self._loop_task and not self._loop_task.done():
+            self._loop_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._loop_task
+
         if self._active_screen:
             try:
                 await self._active_screen.deactivate()
@@ -102,26 +113,24 @@ class ScreenManager:
         """Switch to next screen."""
         if not self._screens or len(self._screens) <= 1:
             return
-        
-        next_index = (self._current_screen_index + 1) % len(self._screens)
-        await self._switch_to_screen(next_index)
-    
+
+        current_index = self._screens.index(self._active_screen)
+        await self._switch_to_screen((current_index + 1) % len(self._screens))
+
     async def _previous_screen(self):
         """Switch to previous screen."""
         if not self._screens or len(self._screens) <= 1:
             return
-        
-        next_index = (self._current_screen_index - 1) % len(self._screens)
-        await self._switch_to_screen(next_index)
+
+        current_index = self._screens.index(self._active_screen)
+        await self._switch_to_screen((current_index - 1) % len(self._screens))
 
     async def _switch_to_screen(self, target_index: int):
-        """Switch to a specific screen"""
-        
+        """Switch to a specific screen."""
         self._logger.info(
-            f"Switching from screen {self._current_screen_index} to {target_index}"
+            f"Switching from '{type(self._active_screen).__name__}' to '{type(self._screens[target_index]).__name__}'"
         )
-        
-        # Change the active screen
-        await self._screens[self._current_screen_index].deactivate()
-        self._current_screen_index = target_index
-        await self._screens[self._current_screen_index].activate()
+
+        await self._active_screen.deactivate()
+        self._active_screen = self._screens[target_index]
+        await self._active_screen.activate()

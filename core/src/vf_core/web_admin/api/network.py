@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import logging
+
+from vf_core.web_admin.dependencies import verify_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -54,7 +56,7 @@ class ClientModeRequest(BaseModel):
     fallback_timeout: Optional[int] = Field(60, ge=30, le=300)
 
 
-@router.get("/status", response_model=NetworkStatusResponse)
+@router.get("/status", response_model=NetworkStatusResponse, dependencies=[Depends(verify_token)])
 async def get_network_status(request: Request):
     """Get current network status"""
 
@@ -67,7 +69,7 @@ async def get_network_status(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/config", response_model=NetworkConfigResponse)
+@router.get("/config", response_model=NetworkConfigResponse, dependencies=[Depends(verify_token)])
 async def get_network_config(request: Request):
     """Get current network configuration"""
 
@@ -80,7 +82,7 @@ async def get_network_config(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/scan", response_model=List[NetworkInfo])
+@router.get("/scan", response_model=List[NetworkInfo], dependencies=[Depends(verify_token)])
 async def scan_networks(request: Request):
     """Scan for available networks"""
     try:
@@ -92,7 +94,7 @@ async def scan_networks(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/mode/ap")
+@router.post("/mode/ap", dependencies=[Depends(verify_token)])
 async def set_ap_mode(request: Request, config: APModeRequest):
     """Configure and schedule AP mode
     
@@ -131,7 +133,7 @@ async def set_ap_mode(request: Request, config: APModeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/mode/client")
+@router.post("/mode/client", dependencies=[Depends(verify_token)])
 async def set_client_mode(request: Request, config: ClientModeRequest):
     """Configure and schedule client mode
     

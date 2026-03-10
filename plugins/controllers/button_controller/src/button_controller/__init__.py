@@ -1,7 +1,8 @@
 from gpiozero import Button
 import asyncio
 import logging
-from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType
+from typing import Any
+from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 from vf_core.message_bus import MessageBus
 
 class ButtonController(Plugin):
@@ -15,40 +16,48 @@ class ButtonController(Plugin):
         button_b_pin: int = 6,
         button_c_pin: int = 16,
         button_d_pin: int = 24,
+        **kwargs: Any,
     ):
+        require_plugin_args(bus=bus)
         self._logger = logging.getLogger(__name__)
         self._loop = None
         self._bus = bus
-        
+        self._button_a_pin = button_a_pin
+        self._button_b_pin = button_b_pin
+        self._button_c_pin = button_c_pin
+        self._button_d_pin = button_d_pin
+        self._button_a: Button | None = None
+        self._button_b: Button | None = None
+        self._button_c: Button | None = None
+        self._button_d: Button | None = None
+
+    async def start(self):
+        """Acquire GPIO resources and start listening for button presses."""
+        self._loop = asyncio.get_running_loop()
+
         try:
-            # Set up GPIO buttons
-            self._button_a = Button(button_a_pin, pull_up=True)
-            self._button_b = Button(button_b_pin, pull_up=True)
-            self._button_c = Button(button_c_pin, pull_up=True)
-            self._button_d = Button(button_d_pin, pull_up=True)
-            
-            # Wire up button events
+            self._button_a = Button(self._button_a_pin, pull_up=True)
+            self._button_b = Button(self._button_b_pin, pull_up=True)
+            self._button_c = Button(self._button_c_pin, pull_up=True)
+            self._button_d = Button(self._button_d_pin, pull_up=True)
+
             self._button_a.when_pressed = self._on_button_a
             self._button_b.when_pressed = self._on_button_b
             self._button_c.when_pressed = self._on_button_c
             self._button_d.when_pressed = self._on_button_d
 
-            self._logger.info("Button controller initialised")
+            self._logger.info("Button controller ready")
         except Exception as e:
             self._logger.error(f"Failed to initialise buttons: {e}")
             raise
-    
-    async def start(self):
-        self._loop = asyncio.get_running_loop()
-        self._logger.info("Button controller ready")
-    
+
     async def stop(self):
         """Clean up GPIO resources."""
+        buttons = [self._button_a, self._button_b, self._button_c, self._button_d]
         try:
-            self._button_a.close()
-            self._button_b.close()
-            self._button_c.close()
-            self._button_d.close()
+            for button in buttons:
+                if button is not None:
+                    button.close()
             self._logger.info("Button controller stopped")
         except Exception as e:
             self._logger.error(f"Error closing buttons: {e}")

@@ -114,7 +114,7 @@ class NetworkManager:
         Returns:
             List of dicts containing network info
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.scan_networks)
 
     def scan_networks(self) -> List[Dict[str, any]]:
@@ -167,7 +167,7 @@ class NetworkManager:
                         if "Signal level=" in line:
                             signal = line.split("Signal level=")[1].split()[0]
                             current_network["signal"] = signal
-                    except:
+                    except (IndexError, ValueError):
                         pass
 
                 elif "Encryption key:" in line:
@@ -260,8 +260,8 @@ class NetworkManager:
                 )
                 ip_addresses = result.stdout.strip().split()
                 status["ip_address"] = ip_addresses[0] if ip_addresses else None
-            except:
-                pass
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+                self._logger.debug(f"Could not retrieve client network details: {e}")
 
         return status
 

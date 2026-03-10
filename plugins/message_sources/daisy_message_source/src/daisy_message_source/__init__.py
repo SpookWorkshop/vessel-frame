@@ -7,7 +7,7 @@ import logging
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType
+from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 
 
 class DaisyMessageSource(Plugin):
@@ -26,10 +26,9 @@ class DaisyMessageSource(Plugin):
         i2c_bus: int | str = 1,
         i2c_addr: int | str = 0x33,
         block_size: int | str = 32,
+        **kwargs: Any,
     ) -> None:
-        if bus is None:
-            raise ValueError("Daisy Message Source requires MessageBus")
-
+        require_plugin_args(bus=bus)
         self._logger = logging.getLogger(__name__)
         self._bus = bus
         self._topic = topic
@@ -127,7 +126,7 @@ class DaisyMessageSource(Plugin):
     async def _loop(self) -> None:
         """Continuously read from I2C and publish complete messages."""
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             
             # Open I2C bus
             self._i2c = await loop.run_in_executor(

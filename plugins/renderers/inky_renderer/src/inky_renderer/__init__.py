@@ -24,6 +24,7 @@ class InkyRenderer(RendererPlugin):
         width: int = 480,
         height: int = 800,
         orientation: str = "portrait",
+        **kwargs: Any,
     ) -> None:
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inky-display")
 
@@ -68,7 +69,7 @@ class InkyRenderer(RendererPlugin):
             image = image.rotate(90, expand=True)
 
         # Run in thread as it's a blocking call
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(self._executor, self._flush_block, image)
         
 

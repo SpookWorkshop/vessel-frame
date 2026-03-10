@@ -42,8 +42,8 @@ PLUGIN_GROUPS = {
 router = APIRouter()
 
 
-@router.get("/schemas")
-async def get_plugin_schemas(user: dict = Depends(verify_token), pm: PluginManager = Depends(get_plugin_manager)):
+@router.get("/schemas", dependencies=[Depends(verify_token)])
+async def get_plugin_schemas(pm: PluginManager = Depends(get_plugin_manager)):
     """Get configuration schemas for all plugins"""
     schemas = {}
 
@@ -60,8 +60,8 @@ async def get_plugin_schemas(user: dict = Depends(verify_token), pm: PluginManag
     return schemas
 
 
-@router.get("/available")
-async def get_available_plugins(user: dict = Depends(verify_token), pm: PluginManager = Depends(get_plugin_manager)):
+@router.get("/available", dependencies=[Depends(verify_token)])
+async def get_available_plugins(pm: PluginManager = Depends(get_plugin_manager)):
     """Get list of all available plugins (discovered via entry points)."""
     available = {"sources": [], "processors": [], "renderer": [], "screens": [], "controllers": []}
 
@@ -71,10 +71,9 @@ async def get_available_plugins(user: dict = Depends(verify_token), pm: PluginMa
     return available
 
 
-@router.put("/enable")
+@router.put("/enable", dependencies=[Depends(verify_token)])
 async def enable_plugin(
     update: PluginUpdate,
-    user: dict = Depends(verify_token), 
     pm: PluginManager = Depends(get_plugin_manager),
     cm: ConfigManager = Depends(get_config_manager),
 ):
@@ -157,10 +156,9 @@ def _init_plugin_config(cm: ConfigManager, pm: PluginManager, plugin_name: str) 
         logger.exception(f"Error initialising defaults for {plugin_name}")
 
 
-@router.put("/disable")
+@router.put("/disable", dependencies=[Depends(verify_token)])
 async def disable_plugin(
     update: PluginUpdate,
-    pm: PluginManager = Depends(get_plugin_manager),
     cm: ConfigManager = Depends(get_config_manager),
 ):
     """
@@ -170,7 +168,6 @@ async def disable_plugin(
 
     Args:
         update (PluginUpdate): Plugin category and name to disable.
-        pm (PluginManager): Injected plugin manager dependency.
         cm (ConfigManager): Injected config manager dependency.
 
     Returns:

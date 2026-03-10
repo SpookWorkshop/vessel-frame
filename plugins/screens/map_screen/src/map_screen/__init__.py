@@ -25,6 +25,7 @@ from vf_core.plugin_types import (
     ConfigSchema,
     RendererPlugin,
     ScreenPlugin,
+    require_plugin_args,
 )
 from vf_core.render_strategies import PeriodicRenderStrategy
 from vf_core.vessel_manager import VesselManager
@@ -66,13 +67,14 @@ class MapScreen(ScreenPlugin):
         max_lat: float = 0.0,
         min_lon: float = 0.0,
         max_lon: float = 0.0,
-        cache_dir: str = "data",
+        data_dir: Path,
         map_style: str = "mapbox/light-v11",
         mapbox_api_key: str = "",
         vessel_fill_colour: str = "#FF0000",
         vessel_outline_colour: str = "#000000",
-        **kwargs
+        **kwargs: Any,
     ) -> None:
+        require_plugin_args(bus=bus, renderer=renderer, vm=vm, asset_manager=asset_manager)
         self._logger = logging.getLogger(__name__)
 
         self._bus = bus
@@ -83,7 +85,7 @@ class MapScreen(ScreenPlugin):
         self._task: asyncio.Task[None] | None = None
         self._palette = renderer.palette
         self._map_style = map_style
-        self._cache_dir = Path(cache_dir)
+        self._cache_dir = data_dir / "map_cache"
         self._mapbox_key = mapbox_api_key
 
         if len(self._mapbox_key) == 0:
@@ -196,7 +198,7 @@ class MapScreen(ScreenPlugin):
         """Internal loop that receives update events and requests renders."""
         try:
             async for _ in self._bus.subscribe(self._in_topic):
-                await self._render_strategy.request_render()
+                self._render_strategy.request_render()
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -497,12 +499,6 @@ def get_config_schema() -> ConfigSchema:
                 label="Map Style",
                 field_type=ConfigFieldType.STRING,
                 default="mapbox/light-v11",
-            ),
-            ConfigField(
-                key="cache_dir",
-                label="Map Cache Directory",
-                field_type=ConfigFieldType.STRING,
-                default="data",
             ),
             ConfigField(
                 key="vessel_fill_colour",

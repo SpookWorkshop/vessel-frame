@@ -5,6 +5,26 @@ from dataclasses import dataclass
 if TYPE_CHECKING:
     from PIL import Image, ImageFont
 
+
+def require_plugin_args(**kwargs: Any) -> None:
+    """
+    Validate that all provided plugin arguments are not None.
+
+    Should be called at the top of a plugin's __init__ to catch missing
+    required arguments early with a clear error message.
+
+    Args:
+        **kwargs: Argument names and their values to validate.
+
+    Raises:
+        ValueError: If any of the provided arguments are None, lists all
+            missing argument names in the error message.
+    """
+    missing = [name for name, value in kwargs.items() if value is None]
+    if missing:
+        raise ValueError(f"Missing required plugin arguments: {', '.join(missing)}")
+
+
 # Plugin discovery via setuptools entry points
 # Plugins register themselves in pyproject.toml under these groups
 GROUP_SOURCES = "vesselframe.plugins.messagesource"

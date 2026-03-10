@@ -91,8 +91,8 @@ class VesselManager:
         """
         mmsi = str(message["mmsi"])
 
-        # Ship MMSI should be 9 or more digits. Under 9 means it's
-        # probably a base station, navigation aid etc
+        # Ship MMSI must be exactly 9 digits. Anything else means it's
+        # a base station, navigation aid etc
         if len(mmsi) != 9:
             self._logger.debug(f"MMSI {mmsi} is not a ship. Skip update.")
             return False
@@ -223,13 +223,10 @@ class VesselManager:
             "ts": int(time.time()),
         }
 
-        # Trim if over max
+        # Trim if over max by evicting the least recently updated vessel
         if len(self._vessels) > self._max_tracked:
-            self._vessels = dict(
-                sorted(
-                    self._vessels.items(), key=lambda item: item[1]["ts"], reverse=True
-                )[: self._max_tracked]
-            )
+            oldest_mmsi = min(self._vessels, key=lambda m: self._vessels[m]["ts"])
+            del self._vessels[oldest_mmsi]
 
         # Publish zone events
         ship = self._vessels[mmsi]

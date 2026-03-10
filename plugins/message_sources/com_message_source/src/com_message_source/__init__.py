@@ -6,7 +6,7 @@ import logging
 from typing import Any
 from contextlib import suppress
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType
+from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 
 
 class COMMessageSource(Plugin):
@@ -19,19 +19,15 @@ class COMMessageSource(Plugin):
         topic: str = "ais.raw",
         baud_rate: int = 38400,
         port: str,
+        **kwargs: Any,
     ) -> None:
-        if bus is None:
-            raise ValueError("COM Message Source requires MessageBus")
-
-        if port is None:
-            raise ValueError("COM Message Source requires port")
-
+        require_plugin_args(bus=bus, port=port)
         self._logger = logging.getLogger(__name__)
-        self.bus = bus
-        self.topic = topic
-        self.baud_rate = baud_rate
-        self.port = port
-        self.serial = None
+        self._bus = bus
+        self._topic = topic
+        self._baud_rate = baud_rate
+        self._port = port
+        self._serial = None
         self._task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -58,8 +54,8 @@ class COMMessageSource(Plugin):
             with suppress(asyncio.CancelledError):
                 await self._task
 
-        if self.serial is not None:
-            self.serial.close()
+        if self._serial is not None:
+            self._serial.close()
 
     async def _loop(self) -> None:
         """
@@ -73,7 +69,7 @@ class COMMessageSource(Plugin):
         """
         try:
             reader, writer = await serial_asyncio.open_serial_connection(
-                url=self.port, baudrate=self.baud_rate
+                url=self._port, baudrate=self._baud_rate
             )
 
             while True:
@@ -81,7 +77,7 @@ class COMMessageSource(Plugin):
                 if line:
                     message = line.decode("ascii", errors="ignore").strip()
                     if message:
-                        await self.bus.publish(self.topic, message)
+                        await self._bus.publish(self._topic, message)
 
                 # Give other tasks a chance to run
                 await asyncio.sleep(0)

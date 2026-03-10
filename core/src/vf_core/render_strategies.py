@@ -26,7 +26,7 @@ class PeriodicRenderStrategy:
         self._task: asyncio.Task | None = None
         self._last_render_time = 0.0
 
-    async def request_render(self) -> None:
+    def request_render(self) -> None:
         """
         Request a render.
 
@@ -116,7 +116,7 @@ class QueuedRenderStrategy:
         self._task: asyncio.Task | None = None
         self._last_render_time = 0.0
 
-    async def request_render(self, data: Any = None) -> None:
+    def request_render(self, data: Any = None) -> None:
         """
         Queue a render request with optional event data.
 
@@ -135,7 +135,7 @@ class QueuedRenderStrategy:
                 pass
 
         try:
-            await self._event_queue.put_nowait(data)
+            self._event_queue.put_nowait(data)
         except asyncio.QueueFull:
             pass
 
