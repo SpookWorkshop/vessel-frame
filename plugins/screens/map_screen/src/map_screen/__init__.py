@@ -101,6 +101,16 @@ class MapScreen(ScreenPlugin):
         self._min_lon = float(min_lon) if isinstance(min_lon, str) else min_lon
         self._max_lon = float(max_lon) if isinstance(max_lon, str) else max_lon
 
+        self._bounds_valid = (
+            self._max_lat > self._min_lat and self._max_lon > self._min_lon
+        )
+        if not self._bounds_valid:
+            self._logger.warning(
+                "Map bounds are invalid (min >= max). "
+                "Set min_lat, max_lat, min_lon, max_lon in config. "
+                "Vessels will not be drawn until bounds are configured."
+            )
+
         # Ensure cache directory exists and download map images
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._ensure_map_images()
@@ -127,6 +137,9 @@ class MapScreen(ScreenPlugin):
 
     def _ensure_map_images(self) -> None:
         """Download map images for both orientations if they don't exist."""
+        if not self._bounds_valid:
+            return
+
         canvas = self._renderer.canvas
 
         orientations = [
@@ -224,9 +237,10 @@ class MapScreen(ScreenPlugin):
         if current_map:
             canvas.paste(current_map)
 
-        # Draw vessels
-        for vessel in vessels:
-            self._draw_vessel(draw, vessel, width, height, metres_per_pixel, use_shapes)
+        # Draw vessels (only if bounds are configured)
+        if self._bounds_valid:
+            for vessel in vessels:
+                self._draw_vessel(draw, vessel, width, height, metres_per_pixel, use_shapes)
 
         # Header drawn last so it's on top of everything
         self._draw_header_container(draw, width)

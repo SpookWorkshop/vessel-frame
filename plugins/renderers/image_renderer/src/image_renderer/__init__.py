@@ -73,12 +73,6 @@ class ImageRenderer(RendererPlugin):
         """Current Pillow image canvas."""
         return self._canvas
 
-    @property
-    def fonts(self) -> dict[str, ImageFont.FreeTypeFont]:
-        """Dictionary of preloaded font sizes."""
-        return self._fonts
-
-
 def get_config_schema() -> ConfigSchema:
     """Return the config schema for this plugin.
 

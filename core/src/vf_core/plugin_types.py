@@ -3,7 +3,7 @@ from enum import Enum
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
-    from PIL import Image, ImageFont
+    from PIL import Image
 
 
 def require_plugin_args(**kwargs: Any) -> None:
@@ -55,11 +55,6 @@ class RendererPlugin(Protocol):
     @property
     def canvas(self) -> "Image.Image":
         """PIL Image canvas for screens to draw on."""
-        ...
-
-    @property
-    def fonts(self) -> dict[str, "ImageFont.FreeTypeFont"]:
-        """Available fonts keyed by size name (xsmall, small, medium, large)."""
         ...
 
     @property
