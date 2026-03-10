@@ -43,12 +43,6 @@ class InkyRenderer(RendererPlugin):
 
         self._canvas: Image.Image = Image.new("RGB", (self._width, self._height))
 
-    def _load_font(self, font_path: str, size: int, weight_name: str = "Regular") -> ImageFont.FreeTypeFont:
-        """Load a font with specified size and weight."""
-        font = ImageFont.truetype(font_path, size)
-        font.set_variation_by_name(weight_name)
-        return font
-
     def _flush_block(self, image: Image.image) -> None:
         """Blocking flush operation."""
         try:
@@ -101,12 +95,6 @@ class InkyRenderer(RendererPlugin):
     def canvas(self) -> Image.Image:
         """Current Pillow image canvas."""
         return self._canvas
-
-    @property
-    def fonts(self) -> dict[str, ImageFont.FreeTypeFont]:
-        """Dictionary of preloaded font sizes."""
-        return self._fonts
-
 
 def get_config_schema() -> ConfigSchema:
     """Return the config schema for this plugin.
