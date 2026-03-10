@@ -81,6 +81,7 @@ class ZoneScreen(ScreenPlugin):
         lat = float(zone_lat) if isinstance(zone_lat, str) else zone_lat
         lon = float(zone_lon) if isinstance(zone_lon, str) else zone_lon
         rad = float(zone_rad) if isinstance(zone_rad, str) else zone_rad
+        self._zone_name = zone_name
         self._vessel_manager.register_zone(zone_name, lat, lon, rad)
 
     async def activate(self) -> None:
@@ -89,6 +90,7 @@ class ZoneScreen(ScreenPlugin):
             return
 
         await self._render_strategy.start()
+        self._render_strategy.request_render()
         self._task = asyncio.create_task(self._update_loop())
 
     async def deactivate(self) -> None:
@@ -111,7 +113,7 @@ class ZoneScreen(ScreenPlugin):
                     self._render_strategy.request_render()
         except asyncio.CancelledError:
             raise
-        except Exception as e:
+        except Exception:
             self._logger.exception("Update loop crashed")
             raise
 
@@ -139,13 +141,8 @@ class ZoneScreen(ScreenPlugin):
         return True
 
     async def _render(self) -> None:
-        """Render the detail view for the current vessel, if present."""
+        """Render the detail view for the current vessel, or a waiting state."""
         vessel = self._current_vessel
-
-        if not vessel:
-            return
-        
-        self._logger.info("Rendering vessel")
 
         canvas = self._renderer.canvas
         draw = ImageDraw.Draw(canvas)
@@ -157,14 +154,49 @@ class ZoneScreen(ScreenPlugin):
         text_x = self.SCREEN_PADDING + self.CONTAINER_PADDING_HORZ
         text_y = self.SCREEN_PADDING + self.CONTAINER_PADDING_VERT
 
-        # Draw sections
         text_y = self._draw_header(draw, text_x, text_y)
         text_y += self.SECTION_SPACING
-        text_y = self._draw_vessel_diagram(draw, text_x, text_y, width, vessel)
-        text_y = self._draw_vessel_name(draw, text_x, text_y, width, vessel)
-        text_y = self._draw_vessel_info(draw, text_x, text_y, width, vessel)
+
+        if vessel is None:
+            self._draw_waiting_state(draw, text_x, text_y, width, height)
+        else:
+            self._logger.info("Rendering vessel")
+            text_y = self._draw_vessel_diagram(draw, text_x, text_y, width, vessel)
+            text_y = self._draw_vessel_name(draw, text_x, text_y, width, vessel)
+            self._draw_vessel_info(draw, text_x, text_y, width, vessel)
 
         await self._renderer.flush()
+
+    def _draw_waiting_state(
+        self,
+        draw: ImageDraw.ImageDraw,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+    ) -> None:
+        """Draw a placeholder when no vessel is currently in the zone."""
+        medium_font = self._fonts["medium"]
+        small_font = self._fonts["small"]
+
+        zone_text = f"Zone: {self._zone_name}"
+        zone_w = self._get_text_width(medium_font, zone_text)
+        draw.text(
+            (width // 2 - zone_w // 2, y),
+            zone_text,
+            fill=self._palette["text"],
+            font=medium_font,
+        )
+        y += self._get_text_height(medium_font, zone_text) + 16
+
+        status_text = "Waiting for vessel..."
+        status_w = self._get_text_width(small_font, status_text)
+        draw.text(
+            (width // 2 - status_w // 2, y),
+            status_text,
+            fill=self._palette["text"],
+            font=small_font,
+        )
 
     def _draw_container(
         self, draw: ImageDraw.ImageDraw, width: int, height: int
