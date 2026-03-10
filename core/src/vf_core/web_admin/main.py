@@ -30,15 +30,16 @@ app.include_router(plugins.router, prefix="/api/plugins", tags=["plugins"])
 app.include_router(system.router, prefix="/api/system", tags=["system"])
 app.include_router(network.router, prefix="/api/network", tags=["network"])
 
-# Serve static files
+# Serve static files (includes dist/ subdirectory for built assets)
 static_dir = Path(__file__).parent / "static"
+dist_dir = static_dir / "dist"
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-@app.get("/")
-async def root():
-    """Serve the index page when root requested"""
-    return FileResponse(static_dir / "index.html")
+@app.get("/{path:path}")
+async def spa(path: str):
+    """Serve the Preact SPA for all non-API routes (client-side routing)."""
+    return FileResponse(dist_dir / "index.html")
 
 
 async def start_admin_server(
