@@ -1,0 +1,20 @@
+{
+  "name": "vessel-frame-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@picocss/pico": "^2.0.6",
+    "preact": "^10.25.4",
+    "wouter": "^3.5.3"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.3",
+    "vite": "^6.3.5"
+  }
+}

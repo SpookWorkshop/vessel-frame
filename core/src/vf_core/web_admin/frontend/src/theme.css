@@ -1,0 +1,478 @@
+/* -------------------------------------------------------
+   Vessel Frame - PicoCSS theme overrides
+   Dark slate + teal colour scheme
+------------------------------------------------------- */
+
+:root {
+  /* Compact scale - PicoCSS defaults are generous for public sites;
+     tighter spacing suits a tool admin panel */
+  --pico-font-size: 93%;
+  --pico-spacing: 0.875rem;
+  --pico-form-element-spacing-vertical: 0.5rem;
+  --pico-form-element-spacing-horizontal: 0.75rem;
+  --pico-block-spacing-vertical: 1rem;
+  --pico-block-spacing-horizontal: 1.25rem;
+}
+
+/* PicoCSS v2 scopes colour variables under attribute selectors which
+   outspecify :root. Match the same selectors to override correctly. */
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+  /* Primary accent - teal */
+  --pico-primary: #0d9488;
+  --pico-primary-hover: #0a7a70;
+  --pico-primary-focus: rgba(13, 148, 136, 0.25);
+  --pico-primary-background: #0d9488;
+  --pico-primary-hover-background: #0a7a70;
+  --pico-primary-underline: rgba(13, 148, 136, 0.5);
+  --pico-primary-inverse: #fff;
+
+  /* Backgrounds - cool slate-tinted light grey */
+  --pico-background-color: #eef1f4;
+  --pico-card-background-color: #ffffff;
+  --pico-card-border-color: #cdd4dc;
+
+  /* Typography */
+  --pico-color: #1e2a35;
+  --pico-muted-color: #556070;
+  --pico-muted-border-color: #cdd4dc;
+
+  /* Form elements */
+  --pico-form-element-border-color: #a8b4c0;
+  --pico-form-element-focus-color: #0d9488;
+}
+
+[data-theme="dark"] {
+  --pico-primary: #14b8a6;
+  --pico-primary-hover: #0d9488;
+  --pico-primary-focus: rgba(20, 184, 166, 0.25);
+  --pico-primary-background: #14b8a6;
+  --pico-primary-hover-background: #0d9488;
+  --pico-primary-inverse: #0a1520;
+
+  --pico-background-color: #0e1822;
+  --pico-card-background-color: #162030;
+  --pico-card-border-color: #1e3040;
+
+  --pico-color: #d8e4ee;
+  --pico-muted-color: #6a8098;
+  --pico-muted-border-color: #1e3040;
+
+  --pico-form-element-border-color: #243848;
+  --pico-form-element-focus-color: #14b8a6;
+}
+
+/* -------------------------------------------------------
+   App shell layout
+------------------------------------------------------- */
+
+body {
+  min-height: 100vh;
+}
+
+/* Site header / top nav */
+.site-header {
+  background-color: #1e2a35;
+  color: #d8e4ee;
+  border-bottom: 3px solid var(--pico-primary);
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.site-header .header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+}
+
+.site-header .brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #d8e4ee;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.site-header .brand span {
+  color: var(--pico-primary);
+}
+
+/* Top nav tabs */
+.site-nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.site-nav a {
+  color: #6a8098;
+  text-decoration: none;
+  padding: 0.35rem 0.85rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.site-nav a:hover {
+  color: #d8e4ee;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.site-nav a.active {
+  color: #d8e4ee;
+  background-color: rgba(13, 148, 136, 0.2);
+}
+
+.logout-btn {
+  color: #6a8098;
+  background: none;
+  border: none;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+  margin: 0;
+  width: auto;
+}
+
+.logout-btn:hover {
+  color: #d8e4ee;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Page content */
+.page-content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+/* -------------------------------------------------------
+   Auth page - full screen, centred, dark card on light bg
+------------------------------------------------------- */
+
+.auth-page {
+  /* Override .page-content layout to fill and centre */
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-page > article {
+  width: 100%;
+  max-width: 420px;
+  margin: 0;
+  background-color: #1e2a35;
+  border-color: #2a3a48;
+  color: #d8e4ee;
+}
+
+/* PicoCSS gives <article><header> its own background - override it */
+.auth-page > article > header {
+  background-color: #1e2a35;
+  border-bottom-color: #2a3a48;
+  padding-bottom: 0.5rem;
+}
+
+.auth-page > article > header h2 {
+  color: #d8e4ee;
+  margin-bottom: 0.25rem;
+}
+
+.auth-page > article > header p {
+  color: #6a8098;
+  margin: 0;
+}
+
+.auth-page > article label {
+  color: #a8bccf;
+}
+
+.auth-page > article input {
+  background-color: #243545;
+  border-color: #2e4258;
+  color: #d8e4ee;
+}
+
+.auth-page > article input:focus {
+  border-color: var(--pico-primary);
+  background-color: #2a3d50;
+}
+
+/* PicoCSS v2 sets button colours via [data-theme] scoped rules which
+   outspecify :root overrides. Re-declare on the article scope and
+   use !important to guarantee the cascade. */
+.auth-page > article {
+  --pico-primary-background: #0d9488;
+  --pico-primary-hover-background: #0a7a70;
+  --pico-primary-border-color: #0d9488;
+}
+
+.auth-page > article button[type="submit"] {
+  background-color: #0d9488 !important;
+  border-color: #0d9488 !important;
+  color: #fff !important;
+}
+
+.auth-page > article button[type="submit"]:hover:not([aria-busy="true"]) {
+  background-color: #0a7a70 !important;
+  border-color: #0a7a70 !important;
+}
+
+/* -------------------------------------------------------
+   Plugin sections & cards
+------------------------------------------------------- */
+
+.plugin-section {
+  margin-bottom: 2rem;
+}
+
+.plugin-section h3 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pico-muted-color);
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+}
+
+.plugin-card {
+  margin-bottom: 0.5rem;
+  padding: var(--pico-block-spacing-vertical) var(--pico-block-spacing-horizontal);
+}
+
+.plugin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.plugin-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 500;
+}
+
+.plugin-card-config {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--pico-muted-border-color);
+  padding-top: 0.75rem;
+}
+
+.config-toggle {
+  background: none;
+  border: none;
+  color: var(--pico-muted-color);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  width: auto;
+}
+
+.config-toggle:hover {
+  color: var(--pico-primary);
+}
+
+.config-form-wrap {
+  margin-top: 0.75rem;
+}
+
+.save-status {
+  font-size: 0.82rem;
+  margin: 0.4rem 0 0;
+}
+
+.save-status-ok  { color: #2e7d32; }
+.save-status-err { color: #b71c1c; }
+
+[data-theme="dark"] .save-status-ok  { color: #81c784; }
+[data-theme="dark"] .save-status-err { color: #ef9a9a; }
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* -------------------------------------------------------
+   Network page
+------------------------------------------------------- */
+
+.network-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.network-status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.network-detail {
+  font-size: 0.9rem;
+  color: var(--pico-muted-color);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0 1rem;
+  align-items: end;
+}
+
+@media (max-width: 600px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+
+.input-with-action {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.input-with-action input {
+  flex: 1;
+  margin: 0;
+}
+
+.input-with-action button {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.network-scan-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.5rem 0 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.25rem;
+}
+
+.network-scan-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.network-scan-meta {
+  display: flex;
+  gap: 0.5rem;
+  color: var(--pico-muted-color);
+  font-size: 0.8rem;
+}
+
+/* Mode badges */
+.badge-mode-ap {
+  background-color: rgba(13, 148, 136, 0.12);
+  color: #0d9488;
+}
+
+.badge-mode-client {
+  background-color: rgba(34, 139, 34, 0.12);
+  color: #228b22;
+}
+
+[data-theme="dark"] .badge-mode-ap {
+  background-color: rgba(20, 184, 166, 0.2);
+  color: #14b8a6;
+}
+
+[data-theme="dark"] .badge-mode-client {
+  background-color: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+}
+
+/* -------------------------------------------------------
+   Badges
+------------------------------------------------------- */
+
+.badge {
+  display: inline-block;
+  padding: 0.2em 0.55em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-enabled {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-disabled {
+  background-color: #f0eeec;
+  color: #6b6460;
+}
+
+[data-theme="dark"] .badge-enabled {
+  background-color: rgba(46, 125, 50, 0.2);
+  color: #81c784;
+}
+
+[data-theme="dark"] .badge-disabled {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #9e948c;
+}
+
+/* -------------------------------------------------------
+   Alerts
+------------------------------------------------------- */
+
+.alert {
+  padding: 0.85rem 1rem;
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.alert-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.alert-error {
+  background-color: #fdecea;
+  color: #b71c1c;
+  border: 1px solid #f5c6c3;
+}
+
+[data-theme="dark"] .alert-success {
+  background-color: rgba(46, 125, 50, 0.15);
+  color: #81c784;
+  border-color: rgba(46, 125, 50, 0.3);
+}
+
+[data-theme="dark"] .alert-error {
+  background-color: rgba(183, 28, 28, 0.15);
+  color: #ef9a9a;
+  border-color: rgba(183, 28, 28, 0.3);
+}
