@@ -48,7 +48,8 @@ class ZoneScreen(ScreenPlugin):
         zone_name: str = "Unknown",
         zone_lat: float = 0.0,
         zone_lon: float = 0.0,
-        zone_rad: float = 0.0
+        zone_rad: float = 0.0,
+        **kwargs: Any,
     ) -> None:
         require_plugin_args(bus=bus, renderer=renderer, vm=vm, asset_manager=asset_manager)
         self._logger = logging.getLogger(__name__)

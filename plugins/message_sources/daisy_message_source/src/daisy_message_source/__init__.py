@@ -26,6 +26,7 @@ class DaisyMessageSource(Plugin):
         i2c_bus: int | str = 1,
         i2c_addr: int | str = 0x33,
         block_size: int | str = 32,
+        **kwargs: Any,
     ) -> None:
         require_plugin_args(bus=bus)
         self._logger = logging.getLogger(__name__)

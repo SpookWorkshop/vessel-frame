@@ -1,6 +1,7 @@
 from gpiozero import Button
 import asyncio
 import logging
+from typing import Any
 from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 from vf_core.message_bus import MessageBus
 
@@ -15,6 +16,7 @@ class ButtonController(Plugin):
         button_b_pin: int = 6,
         button_c_pin: int = 16,
         button_d_pin: int = 24,
+        **kwargs: Any,
     ):
         require_plugin_args(bus=bus)
         self._logger = logging.getLogger(__name__)

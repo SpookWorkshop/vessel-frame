@@ -22,6 +22,7 @@ class ImageRenderer(RendererPlugin):
         width: int = 480,
         height: int = 800,
         orientation: str = "portrait",
+        **kwargs: Any,
     ) -> None:
         self._out_path = data_dir / "image.png"
         self._orientation = orientation

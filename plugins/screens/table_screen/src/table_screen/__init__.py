@@ -36,6 +36,7 @@ class TableScreen(ScreenPlugin):
         asset_manager: AssetManager,
         in_topic: str = "vessel.updated",
         update_interval: float = 30.0,
+        **kwargs: Any,
     ) -> None:
         require_plugin_args(bus=bus, renderer=renderer, vm=vm, asset_manager=asset_manager)
         self._logger = logging.getLogger(__name__)

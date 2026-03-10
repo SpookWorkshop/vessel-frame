@@ -70,6 +70,7 @@ class MockMessageSource(Plugin):
         messages: list[str] | None = None,
         min_delay: float = 0.5,
         max_delay: float = 5.0,
+        **kwargs: Any,
     ) -> None:
         require_plugin_args(bus=bus)
         self._bus = bus

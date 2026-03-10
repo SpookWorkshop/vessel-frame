@@ -19,6 +19,7 @@ class COMMessageSource(Plugin):
         topic: str = "ais.raw",
         baud_rate: int = 38400,
         port: str,
+        **kwargs: Any,
     ) -> None:
         require_plugin_args(bus=bus, port=port)
         self._logger = logging.getLogger(__name__)

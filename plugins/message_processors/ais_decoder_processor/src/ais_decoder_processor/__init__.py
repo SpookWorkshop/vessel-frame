@@ -26,6 +26,7 @@ class AISDecoderProcessor(Plugin):
         bus: MessageBus,
         in_topic: str = "ais.raw",
         out_topic: str = "ais.decoded",
+        **kwargs: Any,
     ) -> None:
         require_plugin_args(bus=bus)
         self._logger = logging.getLogger(__name__)
