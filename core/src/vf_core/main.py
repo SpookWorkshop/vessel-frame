@@ -5,6 +5,7 @@ import asyncio
 from contextlib import suppress
 from functools import partial
 import logging
+import os
 import signal
 import sys
 from pathlib import Path
@@ -38,6 +39,15 @@ Usage:
 """
 
 
+def _default_data_dir() -> Path:
+    if sys.platform == "win32":
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            return Path(local_app_data) / "vessel-frame"
+        return Path.home() / "AppData" / "Local" / "vessel-frame"
+    return Path("/var/lib/vessel-frame")
+
+
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     """Parse command-line arguments.
 
@@ -50,7 +60,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="vessel-frame")
     parser.add_argument("--config", type=Path, default=Path("config.toml"))
     parser.add_argument("--db", type=Path, default=Path("db.sqlite"))
-    parser.add_argument("--data-dir", type=Path, default=Path("/var/lib/vessel-frame"))
+    parser.add_argument("--data-dir", type=Path, default=_default_data_dir())
     parser.add_argument("--log-level", default="INFO", help="DEBUG, INFO, WARNING, ERROR")
     parser.add_argument("--log-path", type=Path, default=Path("vessel_frame.log"))
     return parser.parse_args(argv)
