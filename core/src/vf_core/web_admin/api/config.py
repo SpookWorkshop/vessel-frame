@@ -5,7 +5,7 @@ import logging
 
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
-from vf_core.plugin_types import GROUP_SCHEMAS
+from vf_core.plugin_types import GROUP_SCHEMAS, ConfigField, ConfigFieldType
 from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager, verify_token
 
 logger = logging.getLogger(__name__)
@@ -102,11 +102,53 @@ async def update_config(
         )
 
     try:
-        cm.set(update.path, update.value)
+        value = _coerce_config_value(update.path, update.value, pm)
+        cm.set(update.path, value)
         cm.save()
-        return {"success": True, "path": update.path, "value": update.value}
+        return {"success": True, "path": update.path, "value": value}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+def _coerce_config_value(path: str, value: Any, pm: PluginManager) -> Any:
+    """
+    Coerce a config value to the type declared in the plugin's schema.
+
+    Falls back to returning the value unchanged if the schema or field cannot
+    be found, or if coercion fails.
+    """
+    parts = path.split(".", 1)
+    if len(parts) != 2:
+        return value
+
+    plugin_name, field_key = parts
+
+    try:
+        schema_func = pm.load_factory(GROUP_SCHEMAS, plugin_name)
+        schema = schema_func()
+        field: ConfigField | None = next(
+            (f for f in schema.fields if f.key == field_key), None
+        )
+        if field is None:
+            return value
+
+        ft = field.field_type
+        if ft == ConfigFieldType.INTEGER:
+            return int(value)
+        elif ft == ConfigFieldType.FLOAT:
+            return float(value)
+        elif ft == ConfigFieldType.BOOLEAN:
+            if isinstance(value, bool):
+                return value
+            return str(value).lower() in ("true", "1", "yes")
+        elif ft in (ConfigFieldType.STRING, ConfigFieldType.COLOUR,
+                    ConfigFieldType.FILE, ConfigFieldType.SELECT):
+            return str(value)
+        # JSON and unknown types: return as-is
+        return value
+    except Exception:
+        logger.warning(f"Failed to coerce config value for '{path}', using raw value")
+        return value
 
 
 def _is_valid_config_path(path: str, pm: PluginManager) -> bool:
