@@ -3,6 +3,8 @@ from collections.abc import Iterable, Callable
 from typing import Any
 import logging
 
+from .plugin_types import GROUP_SCHEMAS, ConfigFieldType
+
 
 class PluginManager:
     def __init__(self) -> None:
@@ -91,7 +93,9 @@ class PluginManager:
         Instantiate a plugin using its registered factory.
 
         Loads the plugin factory from the specified entry point group and
-        instantiates it with the provided keyword arguments.
+        instantiates it with the provided keyword arguments. Config values
+        are coerced to the types declared in the plugin's schema before
+        being passed to the factory.
 
         Args:
             group (str): The entry point group containing the plugin.
@@ -102,8 +106,56 @@ class PluginManager:
             Any: The instantiated plugin object.
         """
         factory = self.load_factory(group, name)
+        kwargs = self._coerce_kwargs(name, kwargs)
         plugin = factory(**kwargs)
 
         self._logger.info(f"Created plugin '{name}': {type(plugin).__name__}")
 
         return plugin
+
+    def _coerce_kwargs(self, name: str, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """
+        Coerce plugin kwargs to the types declared in the plugin's schema.
+
+        Falls back to returning kwargs unchanged if no schema is found or
+        coercion fails for a given field.
+
+        Args:
+            name (str): Plugin name used to look up the schema.
+            kwargs (dict[str, Any]): Raw kwargs to coerce.
+
+        Returns:
+            dict[str, Any]: Kwargs with values coerced to declared types.
+        """
+        try:
+            schema_func = self.load_factory(GROUP_SCHEMAS, name)
+            schema = schema_func()
+        except KeyError:
+            return kwargs
+        except Exception:
+            self._logger.warning(f"Failed to load schema for '{name}', skipping type coercion")
+            return kwargs
+
+        coerced = dict(kwargs)
+        for field in schema.fields:
+            if field.key not in coerced:
+                continue
+            value = coerced[field.key]
+            try:
+                ft = field.field_type
+                if ft == ConfigFieldType.INTEGER:
+                    coerced[field.key] = int(value)
+                elif ft == ConfigFieldType.FLOAT:
+                    coerced[field.key] = float(value)
+                elif ft == ConfigFieldType.BOOLEAN:
+                    if not isinstance(value, bool):
+                        coerced[field.key] = str(value).lower() in ("true", "1", "yes")
+                elif ft in (ConfigFieldType.STRING, ConfigFieldType.COLOUR,
+                            ConfigFieldType.FILE, ConfigFieldType.SELECT):
+                    coerced[field.key] = str(value)
+            except Exception:
+                self._logger.warning(
+                    f"Failed to coerce '{field.key}' to {field.field_type} for plugin '{name}'"
+                )
+
+        return coerced
