@@ -9,7 +9,7 @@ from ..auth import (
     get_or_create_secret_key,
     get_admin_credentials,
     set_admin_credentials,
-    is_admin_configured,
+    is_setup_locked,
 )
 
 ph = PasswordHasher(type=Type.ID)
@@ -25,8 +25,7 @@ class AuthRequest(BaseModel):
 async def setup_admin(request: AuthRequest):
     """Initial setup, create admin credentials."""
 
-    # Check if already set up
-    if is_admin_configured():
+    if is_setup_locked():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin already configured")
 
     # Hash password
