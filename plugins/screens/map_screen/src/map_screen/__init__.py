@@ -184,6 +184,7 @@ class MapScreen(ScreenPlugin):
             return
 
         await self._render_strategy.start()
+        self._render_strategy.request_render()
         self._task = asyncio.create_task(self._update_loop())
 
     async def deactivate(self) -> None:
