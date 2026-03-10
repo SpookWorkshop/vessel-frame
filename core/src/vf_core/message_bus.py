@@ -12,6 +12,9 @@ class MessageBus:
     Multiple subscribers to one topic will receive the event in an unpredictable order.
     """
 
+    TOPIC_SYSTEM_ERROR = "system.error"
+    TOPIC_SYSTEM_ERROR_CLEARED = "system.error_cleared"
+
     def __init__(self) -> None:
         self._subs: defaultdict[str, list[asyncio.Queue[Any]]] = defaultdict(list)
         self._lock = asyncio.Lock()
