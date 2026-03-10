@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from vf_core.plugin_types import (
     ConfigField,
@@ -26,6 +27,7 @@ class InkyRenderer(RendererPlugin):
         orientation: str = "portrait",
         **kwargs: Any,
     ) -> None:
+        self._logger = logging.getLogger(__name__)
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inky-display")
 
         self._display = auto()
