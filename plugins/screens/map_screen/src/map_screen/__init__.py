@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import hashlib
 import math
 import os
 import urllib.request
@@ -111,8 +112,10 @@ class MapScreen(ScreenPlugin):
                 "Vessels will not be drawn until bounds are configured."
             )
 
-        # Ensure cache directory exists and download map images
+        # Ensure cache directory exists, clean stale files and download map images
         self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_key = self._compute_cache_key()
+        self._cleanup_stale_cache()
         self._ensure_map_images()
 
         self._map_portrait = self._load_map_image("map_portrait")
@@ -135,6 +138,27 @@ class MapScreen(ScreenPlugin):
             self._render, max(interval, renderer.MIN_RENDER_INTERVAL)
         )
 
+    def _compute_cache_key(self) -> str:
+        """Return a short hash of the config parameters that affect the map image.
+
+        Any change to bounds, style or canvas dimensions produces a different
+        key, causing a cache miss and triggering a fresh download.
+        """
+        canvas = self._renderer.canvas
+        key_data = (
+            f"{self._min_lat}:{self._max_lat}:{self._min_lon}:{self._max_lon}"
+            f":{self._map_style}:{canvas.width}:{canvas.height}"
+        )
+        return hashlib.sha256(key_data.encode()).hexdigest()[:12]
+
+    def _cleanup_stale_cache(self) -> None:
+        """Remove cached map files that don't match the current cache key."""
+        for path in self._cache_dir.iterdir():
+            if path.name.startswith(("map_portrait_", "map_landscape_")) and \
+                    not path.name.endswith(f"_{self._cache_key}"):
+                self._logger.info(f"Removing stale cache file: {path.name}")
+                path.unlink(missing_ok=True)
+
     def _ensure_map_images(self) -> None:
         """Download map images for both orientations if they don't exist."""
         if not self._bounds_valid:
@@ -148,9 +172,9 @@ class MapScreen(ScreenPlugin):
         ]
 
         for name, width, height in orientations:
-            img_path = self._cache_dir / name
-            
-            if img_path.exists():
+            img_path = self._cache_dir / f"{name}_{self._cache_key}"
+
+            if self._is_valid_image(img_path):
                 continue
 
             if len(self._mapbox_key) == 0:
@@ -174,15 +198,32 @@ class MapScreen(ScreenPlugin):
             except Exception:
                 self._logger.exception(f"Failed to download map image: {name}")
 
+    def _is_valid_image(self, path: Path) -> bool:
+        """Return True if the file exists and can be fully decoded.
+
+        Deletes the file if it exists but is corrupt, so the next call to
+        _ensure_map_images triggers a fresh download.
+        """
+        if not path.exists():
+            return False
+        try:
+            with Image.open(path) as img:
+                img.load()
+            return True
+        except Exception:
+            self._logger.warning(f"Cached map image is corrupt, deleting: {path.name}")
+            path.unlink(missing_ok=True)
+            return False
+
     def _load_map_image(self, name: str) -> Image.Image | None:
         """Load a map image from the cache directory."""
-        path = self._cache_dir / name
+        path = self._cache_dir / f"{name}_{self._cache_key}"
 
-        if path.exists():
-            return Image.open(path)
-        
-        self._logger.warning(f"Map image not found: {path}")
-        return None
+        if not self._is_valid_image(path):
+            self._logger.warning(f"Map image not found: {path.name}")
+            return None
+
+        return Image.open(path)
 
     def _get_current_map(self) -> Image.Image | None:
         """Get the appropriate map image for the current canvas orientation."""
