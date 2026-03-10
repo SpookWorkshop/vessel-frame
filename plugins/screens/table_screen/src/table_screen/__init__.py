@@ -1,7 +1,6 @@
 from __future__ import annotations
 import asyncio
 import datetime
-import math
 from typing import Any
 from contextlib import suppress
 from PIL import Image, ImageDraw, ImageFont
