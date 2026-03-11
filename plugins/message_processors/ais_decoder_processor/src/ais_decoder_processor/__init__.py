@@ -7,6 +7,7 @@ from vf_core.plugin_types import Plugin, require_plugin_args
 from pyais.queue import NMEAQueue
 from pyais.stream import TagBlockQueue
 import logging
+from .ais_utils import get_vessel_full_type_name
 
 
 class AISDecoderProcessor(Plugin):
@@ -111,6 +112,11 @@ class AISDecoderProcessor(Plugin):
                             key: val.decode("utf-8", errors="ignore") if isinstance(val, bytes) else val
                             for key, val in decoded_sentence.items()
                         }
+
+                        if decoded_sentence.get('msg_type') == 5:
+                            decoded_sentence['ship_type_name'] = get_vessel_full_type_name(
+                                decoded_sentence.get('ship_type')
+                            )
 
                         await self._bus.publish(self._out_topic, decoded_sentence)
                     except Exception:

@@ -10,7 +10,6 @@ from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin, require_plugin_args
 from vf_core.vessel_manager import VesselManager
 from vf_core.asset_manager import AssetManager
-from vf_core.ais_utils import get_vessel_full_type_name
 from vf_core.render_strategies import PeriodicRenderStrategy
 
 
@@ -498,7 +497,7 @@ class ZoneScreen(ScreenPlugin):
             {"label": "Callsign", "value": str(vessel.get("callsign", "Unknown")), "icon": self._icons["callsign"]},
             {
                 "label": "Vessel Type",
-                "value": get_vessel_full_type_name(vessel.get("type", -1)),
+                "value": vessel.get("ship_type_name", "Unknown"),
                 "icon": self._icons["ship_type"]
             },
         ]
