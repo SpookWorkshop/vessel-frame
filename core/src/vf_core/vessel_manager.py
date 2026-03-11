@@ -118,36 +118,39 @@ class VesselManager:
             return
 
         msg_type = message["msg_type"]
-        mmsi = str(message["mmsi"])
+        identifier = str(message["mmsi"])
 
         # Check if this is a new vessel we haven't seen before
-        is_new_vessel = mmsi not in self._vessels
+        is_new_vessel = identifier not in self._vessels
 
         # Type 5 messages have static data
         has_static_data = msg_type == 5
 
         # Prepare vessel data (always include defaults)
         values = {
-            "mmsi": mmsi,
-            "imo": message.get("imo", "0"),
-            "name": message.get("shipname", "Unknown"),
-            "callsign": message.get("callsign", "????"),
-            "ship_type": message.get("ship_type", -1),
-            "bow": message.get("to_bow", 0),
-            "stern": message.get("to_stern", 0),
-            "port": message.get("to_port", 0),
-            "starboard": message.get("to_starboard", 0),
+            "identifier":     identifier,
+            "source_type":    "ais",
+            "mmsi":           identifier,
+            "imo":            message.get("imo", "0"),
+            "name":           message.get("shipname", "Unknown"),
+            "callsign":       message.get("callsign", "????"),
+            "ship_type":      message.get("ship_type", -1),
+            "ship_type_name": message.get("ship_type_name", "Unknown"),
+            "bow":            message.get("to_bow", 0),
+            "stern":          message.get("to_stern", 0),
+            "port":           message.get("to_port", 0),
+            "starboard":      message.get("to_starboard", 0),
             "has_static_data": 1 if has_static_data else 0,
         }
 
         # If new vessel, try to load from database first
         ship_prev = {}
         if is_new_vessel:
-            db_vessel = await self._vessel_repo.get_vessel(mmsi)
+            db_vessel = await self._vessel_repo.get_vessel(identifier)
             if db_vessel:
                 # We've seen this vessel before
                 self._logger.info(
-                    f"Returning vessel: {db_vessel.get('name', 'Unknown')} ({mmsi})"
+                    f"Returning vessel: {db_vessel.get('name', 'Unknown')} ({identifier})"
                 )
                 ship_prev = db_vessel
 
@@ -155,37 +158,37 @@ class VesselManager:
                 await self._bus.publish(
                     self.EVENT_APPEARED,
                     {
-                        "mmsi": mmsi,
+                        "identifier": identifier,
                         "vessel": db_vessel,
                         "known": db_vessel.get("has_static_data", False),
                     },
                 )
             else:
                 # Brand new vessel
-                self._logger.info(f"New vessel detected: {mmsi}")
+                self._logger.info(f"New vessel detected: {identifier}")
                 await self._bus.publish(
                     self.EVENT_FIRST_SEEN,
-                    {"mmsi": mmsi, "has_static_data": has_static_data},
+                    {"identifier": identifier, "has_static_data": has_static_data},
                 )
         else:
-            ship_prev = self._vessels[mmsi]
+            ship_prev = self._vessels[identifier]
 
         # Upsert to database (always insert, conditionally update static data)
         ship = await self._vessel_repo.upsert_vessel(
             values, allow_static_update=has_static_data
         )
         if ship is None:
-            self._logger.error(f"Failed to record ship {mmsi}, skipping update")
+            self._logger.error(f"Failed to record vessel {identifier}, skipping update")
             return
 
         # Check if static data was just discovered
         if has_static_data and not ship_prev.get("has_static_data", False):
             self._logger.info(
-                f"Vessel identified: {ship.get('name')} ({mmsi}), "
-                f"Type: {ship.get('type', 'Unknown')}"
+                f"Vessel identified: {ship.get('name')} ({identifier}), "
+                f"Type: {ship.get('ship_type_name', 'Unknown')}"
             )
             await self._bus.publish(
-                self.EVENT_IDENTIFIED, {"mmsi": mmsi, "vessel": ship}
+                self.EVENT_IDENTIFIED, {"identifier": identifier, "vessel": ship}
             )
 
         # Extract dynamic data (position, speed etc.)
@@ -196,6 +199,7 @@ class VesselManager:
             "callsign",
             "shipname",
             "ship_type",
+            "ship_type_name",
             "to_bow",
             "to_stern",
             "to_port",
@@ -216,7 +220,7 @@ class VesselManager:
         # - ship_prev: The ship data we already have
         # - ship: Augment with static values from database
         # - dynamic_data: Any transient data from the current message
-        self._vessels[mmsi] = {
+        self._vessels[identifier] = {
             **ship_prev,
             **ship,
             **dynamic_data,
@@ -225,11 +229,11 @@ class VesselManager:
 
         # Trim if over max by evicting the least recently updated vessel
         if len(self._vessels) > self._max_tracked:
-            oldest_mmsi = min(self._vessels, key=lambda m: self._vessels[m]["ts"])
-            del self._vessels[oldest_mmsi]
+            oldest_key = min(self._vessels, key=lambda k: self._vessels[k]["ts"])
+            del self._vessels[oldest_key]
 
         # Publish zone events
-        ship = self._vessels[mmsi]
+        ship = self._vessels[identifier]
         zone_current = ship.get("zone")
 
         if zone_current != zone_prev:
@@ -237,7 +241,7 @@ class VesselManager:
                 # Entered a zone
                 await self._bus.publish(
                     self.EVENT_ZONE_ENTERED,
-                    {"mmsi": mmsi, "zone": zone_current, "vessel": ship},
+                    {"identifier": identifier, "zone": zone_current, "vessel": ship},
                 )
 
                 self._logger.info(
@@ -247,7 +251,7 @@ class VesselManager:
                 # Exited a zone
                 await self._bus.publish(
                     self.EVENT_ZONE_EXITED,
-                    {"mmsi": mmsi, "zone": zone_prev, "vessel": ship},
+                    {"identifier": identifier, "zone": zone_prev, "vessel": ship},
                 )
 
                 self._logger.info(
@@ -258,7 +262,7 @@ class VesselManager:
                 await self._bus.publish(
                     self.EVENT_ZONE_MOVED,
                     {
-                        "mmsi": mmsi,
+                        "identifier": identifier,
                         "from_zone": zone_prev,
                         "to_zone": zone_current,
                         "vessel": ship,
@@ -271,7 +275,7 @@ class VesselManager:
 
         # Always publish vessel update
         self._logger.debug(
-            f"Updated: {ship.get('name', 'Unknown')} ({mmsi}), Zone: {zone_current or 'None'}"
+            f"Updated: {ship.get('name', 'Unknown')} ({identifier}), Zone: {zone_current or 'None'}"
         )
         await self._bus.publish(self.EVENT_UPDATED, ship)
 
@@ -339,9 +343,9 @@ class VesselManager:
             {"name": zone_name, "lat": zone_lat, "lon": zone_lon, "radius": zone_rad}
         )
 
-    def get_vessel(self, mmsi: str) -> dict[str, Any] | None:
-        """Retrieve a tracked vessel by its MMSI."""
-        return self._vessels.get(mmsi)
+    def get_vessel(self, identifier: str) -> dict[str, Any] | None:
+        """Retrieve a tracked vessel by its identifier."""
+        return self._vessels.get(identifier)
 
     def get_all_vessels(self) -> list[dict[str, Any]]:
         """Return all vessels currently tracked in memory."""

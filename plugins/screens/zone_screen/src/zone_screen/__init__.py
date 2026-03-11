@@ -119,8 +119,8 @@ class ZoneScreen(ScreenPlugin):
         if not vessel:
             return False
         
-        # Must have MMSI
-        if not vessel.get("mmsi"):
+        # Must have an identifier
+        if not vessel.get("identifier"):
             return False
 
         # Must have a known name (not None, not empty, not "Unknown")
@@ -493,7 +493,7 @@ class ZoneScreen(ScreenPlugin):
         font = self._fonts["medium"]
 
         info_rows = [
-            {"label": "MMSI", "value": str(vessel.get("mmsi", "Unknown")), "icon": self._icons["id"]},
+            {"label": "MMSI", "value": str(vessel.get("identifier", "Unknown")), "icon": self._icons["id"]},
             {"label": "Callsign", "value": str(vessel.get("callsign", "Unknown")), "icon": self._icons["callsign"]},
             {
                 "label": "Vessel Type",

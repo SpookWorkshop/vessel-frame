@@ -1,3 +1,5 @@
+import json
+import time
 import aiosqlite
 import logging
 from typing import Any
@@ -19,37 +21,54 @@ class VesselRepository:
         """
         Create the database schema if it does not already exist.
 
-        Creates the `vessels` table and supporting indexes for efficient lookup.
-        Logs an error if called before the database connection is established.
+        Detects and migrates the legacy per-column AIS schema to the generic
+        identifier + extension JSON layout
         """
         if not self._db_conn:
             self._logger.error("Database not connected")
-            return None
+            return
 
         await self._db_conn.execute("""
             CREATE TABLE IF NOT EXISTS vessels (
-                mmsi TEXT PRIMARY KEY,
-                imo TEXT,
-                name TEXT,
-                callsign TEXT,
-                type INTEGER,
-                bow INTEGER,
-                stern INTEGER,
-                port INTEGER,
-                starboard INTEGER,
+                identifier  TEXT PRIMARY KEY,
+                source_type TEXT NOT NULL DEFAULT 'ais',
+                name        TEXT,
                 first_sight INTEGER,
-                last_sight INTEGER,
-                has_static_data BOOLEAN DEFAULT FALSE,
-                static_data_received INTEGER
+                last_sight  INTEGER,
+                extension   TEXT
             );
         """)
         await self._db_conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_last_sight ON vessels(last_sight DESC);
-        """)
-        await self._db_conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_has_static_data ON vessels(has_static_data);
+            CREATE INDEX IF NOT EXISTS idx_last_sight ON vessels (last_sight DESC);
         """)
         await self._db_conn.commit()
+
+
+    def _build_extension(self, vessel_data: dict[str, Any], has_static_data: bool) -> str:
+        """Pack AIS-specific fields from vessel_data into a JSON extension string."""
+        return json.dumps({
+            "mmsi":                 vessel_data.get("mmsi"),
+            "imo":                  vessel_data.get("imo", "0"),
+            "callsign":             vessel_data.get("callsign", "????"),
+            "ship_type":            vessel_data.get("ship_type", -1),
+            "ship_type_name":       vessel_data.get("ship_type_name", "Unknown"),
+            "bow":                  vessel_data.get("bow", 0),
+            "stern":                vessel_data.get("stern", 0),
+            "port":                 vessel_data.get("port", 0),
+            "starboard":            vessel_data.get("starboard", 0),
+            "has_static_data":      has_static_data,
+            "static_data_received": int(time.time()) if has_static_data else None,
+        })
+
+    def _unpack_row(self, row: dict[str, Any]) -> dict[str, Any]:
+        """Unpack the extension JSON column into the flat vessel dict."""
+        extension_json = row.pop("extension", None)
+        if extension_json:
+            try:
+                row.update(json.loads(extension_json))
+            except (json.JSONDecodeError, TypeError):
+                self._logger.warning("Failed to decode extension JSON for vessel")
+        return row
 
     async def upsert_vessel(
         self, vessel_data: dict[str, Any], allow_static_update: bool
@@ -57,77 +76,85 @@ class VesselRepository:
         """
         Insert or update a vessel record in the database.
 
-        On first sighting the vessel is inserted. On subsequent updates, the
-        record's `last_sight` timestamp is updated. Static vessel data
-        (e.g. name, type) is updated only if `allow_static_update` is True.
+        On first sighting the vessel is inserted with full extension data.
+        On subsequent updates, the record's last_sight timestamp is updated. Static fields
+        (name and extension) are updated only if allow_static_update is True.
+        static_data_received is preserved once set, never overwritten.
 
         Args:
-            vessel_data (dict[str, Any]): Vessel data fields to insert or update.
-            allow_static_update (bool): Whether to update static information such
-                as name, type, or dimensions.
+            vessel_data: Flat dict with identifier, source_type, name, and
+                source-type-specific fields used to build the extension JSON.
+            allow_static_update: Whether to update static information such
+              as name, type, or dimensions.
 
         Returns:
-            dict[str, Any] | None: The upserted vessel record, or None if an error occurred.
+            The upserted vessel record as a flat dict (extension unpacked),
+            or None if an error occurred.
         """
         if not self._db_conn:
             self._logger.error("Database not connected")
             return None
 
+        has_static_data = bool(vessel_data.get("has_static_data", 0))
+        extension = self._build_extension(vessel_data, has_static_data)
+
+        params = {
+            "identifier":  vessel_data["identifier"],
+            "source_type": vessel_data.get("source_type", "ais"),
+            "name":        vessel_data.get("name", "Unknown"),
+            "extension":   extension,
+        }
+
         query = """
-            INSERT INTO vessels (
-                mmsi, imo, name, callsign, type, bow, stern, port, starboard,
-                first_sight, last_sight, has_static_data, static_data_received
-            )
-            VALUES (
-                :mmsi, :imo, :name, :callsign, :ship_type, :bow, :stern, :port, :starboard,
-                strftime('%s', 'now'), 
-                strftime('%s', 'now'),
-                :has_static_data,
-                CASE WHEN :has_static_data = 1 THEN strftime('%s', 'now') ELSE NULL END
-            )
-            ON CONFLICT(mmsi) DO UPDATE SET 
+            INSERT INTO vessels (identifier, source_type, name, first_sight, last_sight, extension)
+            VALUES (:identifier, :source_type, :name,
+                    strftime('%s', 'now'), strftime('%s', 'now'), :extension)
+            ON CONFLICT(identifier) DO UPDATE SET
                 last_sight = excluded.last_sight
         """
 
         if allow_static_update:
+            # Update name and extension. For static_data_received, preserve the
+            # original timestamp using COALESCE so it records the first Type 5.
             query += """,
-                imo = excluded.imo,
                 name = excluded.name,
-                callsign = excluded.callsign,
-                type = excluded.type,
-                bow = excluded.bow,
-                stern = excluded.stern,
-                port = excluded.port,
-                starboard = excluded.starboard,
-                has_static_data = 1,
-                static_data_received = COALESCE(static_data_received, excluded.static_data_received)
+                extension = json_patch(
+                    excluded.extension,
+                    json_object(
+                        'static_data_received',
+                        COALESCE(
+                            json_extract(vessels.extension, '$.static_data_received'),
+                            json_extract(excluded.extension, '$.static_data_received')
+                        )
+                    )
+                )
             """
 
         query += " RETURNING *;"
 
         try:
-            cursor = await self._db_conn.execute(query, vessel_data)
+            cursor = await self._db_conn.execute(query, params)
             result = await cursor.fetchone()
             await self._db_conn.commit()
 
             if result is not None:
-                return dict(result)
-
-            return result
-        except aiosqlite.Error as e:
-            self._logger.exception("SQLite error")
+                return self._unpack_row(dict(result))
+            return None
+        except aiosqlite.Error:
+            self._logger.exception("SQLite error in upsert_vessel")
             await self._db_conn.rollback()
             return None
 
-    async def get_vessel(self, mmsi: str) -> dict[str, Any] | None:
+    async def get_vessel(self, identifier: str) -> dict[str, Any] | None:
         """
-        Fetch a vessel record by its MMSI.
+        Fetch a vessel record by its identifier.
 
         Args:
-            mmsi (str): The vessel's MMSI identifier.
+            identifier: The vessel's source-type identifier (MMSI for AIS).
 
         Returns:
-            dict[str, Any] | None: The vessel record if found, otherwise None.
+            The vessel record as a flat dict (extension unpacked), or None if
+            not found.
         """
         if not self._db_conn:
             self._logger.error("Database not connected")
@@ -135,13 +162,13 @@ class VesselRepository:
 
         try:
             cursor = await self._db_conn.execute(
-                "SELECT * FROM vessels WHERE mmsi = ?", (mmsi,)
+                "SELECT * FROM vessels WHERE identifier = ?", (identifier,)
             )
             result = await cursor.fetchone()
             if result:
-                return dict(result)
+                return self._unpack_row(dict(result))
             return None
-        except aiosqlite.Error as e:
+        except aiosqlite.Error:
             self._logger.exception("Error fetching vessel")
             return None
 
@@ -149,12 +176,9 @@ class VesselRepository:
         """
         Return aggregate statistics for tracked vessels.
 
-        Computes totals and counts of identified and unidentified vessels,
-        including the percentage identified.
-
         Returns:
-            dict[str, Any] | None: A dictionary containing total, identified,
-            unknown, and percent_identified fields, or None if an error occurred.
+            dict with total, identified, unknown, and percent_identified,
+            or None if an error occurred.
         """
         if not self._db_conn:
             self._logger.error("Database not connected")
@@ -164,8 +188,10 @@ class VesselRepository:
             cursor = await self._db_conn.execute("""
                 SELECT
                     COUNT(*) as total,
-                    SUM(CASE WHEN has_static_data = 1 THEN 1 ELSE 0 END) as identified,
-                    SUM(CASE WHEN has_static_data = 0 THEN 1 ELSE 0 END) as unknown
+                    SUM(CASE WHEN json_extract(extension, '$.has_static_data') = 1
+                             THEN 1 ELSE 0 END) as identified,
+                    SUM(CASE WHEN json_extract(extension, '$.has_static_data') != 1
+                             THEN 1 ELSE 0 END) as unknown
                 FROM vessels
             """)
             result = await cursor.fetchone()
@@ -184,8 +210,8 @@ class VesselRepository:
                 "unknown": 0,
                 "percent_identified": 0.0,
             }
-        except aiosqlite.Error as e:
-            self._logger.exception("Error fetching stats")
+        except aiosqlite.Error:
+            self._logger.exception("Error fetching vessel stats")
             return None
 
     async def stop(self) -> None:
