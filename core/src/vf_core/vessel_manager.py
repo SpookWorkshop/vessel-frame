@@ -23,7 +23,7 @@ class VesselManager:
         bus: MessageBus,
         repository: VesselRepository,
         *,
-        in_topic: str = "ais.decoded",
+        in_topic: str = "vessel.decoded",
         max_tracked: int = 50,
     ) -> None:
         self._logger = logging.getLogger(__name__)
