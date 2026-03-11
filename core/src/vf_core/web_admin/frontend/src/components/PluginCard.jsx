@@ -3,7 +3,7 @@ import { enablePlugin, disablePlugin, AuthError } from '../api';
 import { useAppContext } from '../context';
 import { ConfigForm } from './ConfigForm';
 
-export function PluginCard({ category, name, enabled, schema, config, onRefresh }) {
+export function PluginCard({ category, name, enabled, schema, config, mapboxKey, onRefresh }) {
   const { onAuthError } = useAppContext();
   const [open, setOpen] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -56,7 +56,7 @@ export function PluginCard({ category, name, enabled, schema, config, onRefresh 
           </button>
           {open && (
             <div class="config-form-wrap">
-              <ConfigForm schema={schema} config={config} pluginName={name} />
+              <ConfigForm schema={schema} config={config} pluginName={name} mapboxKey={mapboxKey} />
             </div>
           )}
         </div>

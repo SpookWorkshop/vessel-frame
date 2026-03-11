@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@picocss/pico": "^2.0.6",
+    "mapbox-gl": "^3.0.0",
     "preact": "^10.25.4",
     "wouter": "^3.5.3"
   },
