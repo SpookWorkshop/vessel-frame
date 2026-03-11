@@ -144,6 +144,14 @@ def _coerce_config_value(path: str, value: Any, pm: PluginManager) -> Any:
         elif ft in (ConfigFieldType.STRING, ConfigFieldType.COLOUR,
                     ConfigFieldType.FILE, ConfigFieldType.SELECT):
             return str(value)
+        elif ft == ConfigFieldType.ZONE:
+            if not isinstance(value, dict):
+                raise ValueError("Zone value must be a dict with 'lat', 'lon', 'rad' keys")
+            return {
+                "lat": float(value["lat"]),
+                "lon": float(value["lon"]),
+                "rad": float(value["rad"]),
+            }
         # JSON and unknown types: return as-is
         return value
     except Exception:

@@ -91,6 +91,7 @@ class ConfigFieldType(Enum):
     COLOUR = "colour"
     FILE = "file"
     JSON = "json"
+    ZONE = "zone"
 
 
 @dataclass
