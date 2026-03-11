@@ -46,9 +46,7 @@ class ZoneScreen(ScreenPlugin):
         in_topic: str = "vessel.zone_entered",
         update_interval: float = 10.0,
         zone_name: str = "Unknown",
-        zone_lat: float = 0.0,
-        zone_lon: float = 0.0,
-        zone_rad: float = 0.0,
+        zone: dict | None = None,
         **kwargs: Any,
     ) -> None:
         require_plugin_args(bus=bus, renderer=renderer, vm=vm, asset_manager=asset_manager)
@@ -78,9 +76,9 @@ class ZoneScreen(ScreenPlugin):
         for name in ["id", "callsign", "ship_type", "destination", "speed"]:
             self._icons[name] = self._asset_manager.get_icon(name, 20, icon_colour)
 
-        lat = float(zone_lat) if isinstance(zone_lat, str) else zone_lat
-        lon = float(zone_lon) if isinstance(zone_lon, str) else zone_lon
-        rad = float(zone_rad) if isinstance(zone_rad, str) else zone_rad
+        lat = float(zone["lat"]) if zone else 0.0
+        lon = float(zone["lon"]) if zone else 0.0
+        rad = float(zone["rad"]) if zone else 0.0
         self._zone_name = zone_name
         self._vessel_manager.register_zone(zone_name, lat, lon, rad)
 
@@ -586,22 +584,12 @@ def get_config_schema() -> ConfigSchema:
                 default="zone"
             ),
             ConfigField(
-                key="zone_lat",
-                label="Latitude",
-                field_type=ConfigFieldType.FLOAT,
-                default=0
-            ),
-            ConfigField(
-                key="zone_lon",
-                label="Longitude",
-                field_type=ConfigFieldType.FLOAT,
-                default=0
-            ),
-            ConfigField(
-                key="zone_rad",
-                label="Radius",
-                field_type=ConfigFieldType.FLOAT,
-                default=0
+                key="zone",
+                label="Zone",
+                field_type=ConfigFieldType.ZONE,
+                default=None,
+                required=False,
+                description="Centre position and radius of the monitoring zone",
             ),
         ],
     )

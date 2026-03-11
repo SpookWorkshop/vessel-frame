@@ -307,6 +307,161 @@ body {
 }
 
 /* -------------------------------------------------------
+   Zone field (inline in plugin card)
+------------------------------------------------------- */
+
+.zone-field {
+  margin-bottom: 1rem;
+}
+
+.zone-field-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--pico-color);
+  margin-bottom: 0.35rem;
+}
+
+.zone-field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.zone-summary {
+  flex: 1;
+  font-size: 0.88rem;
+  font-family: monospace;
+  color: var(--pico-muted-color);
+}
+
+.zone-unset {
+  font-style: italic;
+}
+
+/* -------------------------------------------------------
+   Zone editor dialog
+------------------------------------------------------- */
+
+.zone-dialog {
+  width: min(700px, 92vw);
+  padding: 0;
+}
+
+.zone-dialog article {
+  margin: 0;
+}
+
+.zone-dialog-header {
+  padding-bottom: 0.5rem;
+}
+
+.zone-dialog-header strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+.zone-dialog-header p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--pico-muted-color);
+}
+
+/* Map fills the full article width by bleeding past the article's padding */
+.zone-map {
+  height: 450px;
+  width: calc(100% + 2 * var(--pico-block-spacing-horizontal));
+  margin-left: calc(-1 * var(--pico-block-spacing-horizontal));
+  margin-right: calc(-1 * var(--pico-block-spacing-horizontal));
+}
+
+.zone-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.zone-footer-info {
+  font-size: 0.88rem;
+  font-family: monospace;
+  color: var(--pico-muted-color);
+  flex: 1;
+}
+
+.zone-footer-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.zone-centre-handle {
+  width: 16px;
+  height: 16px;
+  background-color: #0d9488;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  cursor: move;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.zone-edge-handle {
+  width: 12px;
+  height: 12px;
+  background-color: #ffffff;
+  border: 2px solid #0d9488;
+  border-radius: 50%;
+  cursor: ew-resize;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* -------------------------------------------------------
+   Bounds editor dialog
+------------------------------------------------------- */
+
+.bounds-dialog {
+  width: min(800px, 94vw);
+  padding: 0;
+}
+
+.bounds-dialog article {
+  margin: 0;
+}
+
+/* Map wrapper:
+   Overlay boxes are absolutely positioned children of the same element.
+   overflow:hidden clips the portrait box's large box-shadow to this area. */
+.bounds-map-wrap {
+  position: relative;
+  height: 450px;
+  overflow: hidden;
+  margin: 0 calc(-1 * var(--pico-block-spacing-horizontal));
+  width: calc(100% + 2 * var(--pico-block-spacing-horizontal));
+}
+
+/* Small label in the corner of each overlay box */
+.bounds-box-label {
+  position: absolute;
+  top: 5px;
+  left: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #0d9488;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* Landscape label sits in the dimmed area */
+.bounds-box-label-landscape {
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(13, 148, 136, 0.95);
+}
+
+/* -------------------------------------------------------
    Network page
 ------------------------------------------------------- */
 

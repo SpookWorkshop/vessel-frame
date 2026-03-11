@@ -142,7 +142,7 @@ function APModeForm({ config, onSaved }) {
             </label>
           </div>
 
-          {status === 'success' && <p class="save-status save-status-ok">Saved — changes apply on next reboot</p>}
+          {status === 'success' && <p class="save-status save-status-ok">Saved! Changes apply on next reboot</p>}
           {status && status !== 'success' && <p class="save-status save-status-err">{status}</p>}
 
           <button type="submit" aria-busy={saving} disabled={saving} style="width: auto;">
@@ -249,7 +249,7 @@ function ClientModeForm({ config, onSaved }) {
 
           {autoFallback && (
             <label htmlFor="fallback-timeout">
-              Fallback timeout — {fallbackTimeout}s
+              Fallback timeout: {fallbackTimeout}s
               <input id="fallback-timeout" type="range" min={30} max={300} step={10}
                      value={fallbackTimeout}
                      onInput={e => setFallbackTimeout(e.target.value)}
@@ -257,7 +257,7 @@ function ClientModeForm({ config, onSaved }) {
             </label>
           )}
 
-          {status === 'success' && <p class="save-status save-status-ok">Saved — changes apply on next reboot</p>}
+          {status === 'success' && <p class="save-status save-status-ok">Saved! Changes apply on next reboot</p>}
           {status && status !== 'success' && <p class="save-status save-status-err">{status}</p>}
 
           <button type="submit" aria-busy={saving} disabled={saving} style="width: auto;">

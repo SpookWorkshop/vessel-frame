@@ -67,6 +67,7 @@ export function PluginsPage() {
                 enabled={enabledList.includes(name)}
                 schema={schemas[name] ?? null}
                 config={config}
+                mapboxKey={systemConfig?.mapbox_api_key ?? ''}
                 onRefresh={load}
               />
             ))}
