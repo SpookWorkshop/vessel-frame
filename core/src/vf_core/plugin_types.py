@@ -92,6 +92,7 @@ class ConfigFieldType(Enum):
     FILE = "file"
     JSON = "json"
     ZONE = "zone"
+    BBOX = "bbox"
 
 
 @dataclass

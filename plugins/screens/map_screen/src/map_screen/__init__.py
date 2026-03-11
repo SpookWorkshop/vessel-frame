@@ -64,10 +64,7 @@ class MapScreen(ScreenPlugin):
         asset_manager: AssetManager,
         in_topic: str = "vessel.updated",
         update_interval: float = 300.0,
-        min_lat: float = 0.0,
-        max_lat: float = 0.0,
-        min_lon: float = 0.0,
-        max_lon: float = 0.0,
+        bounds: dict | None = None,
         data_dir: Path,
         map_style: str = "mapbox/light-v11",
         mapbox_api_key: str = "",
@@ -96,19 +93,19 @@ class MapScreen(ScreenPlugin):
         self._vessel_fill = vessel_fill_colour
         self._vessel_outline = vessel_outline_colour
 
-        # Parse bounds - handle string values from config
-        self._min_lat = float(min_lat) if isinstance(min_lat, str) else min_lat
-        self._max_lat = float(max_lat) if isinstance(max_lat, str) else max_lat
-        self._min_lon = float(min_lon) if isinstance(min_lon, str) else min_lon
-        self._max_lon = float(max_lon) if isinstance(max_lon, str) else max_lon
+        # Parse bounds
+        self._min_lat = float(bounds["min_lat"]) if bounds else 0.0
+        self._max_lat = float(bounds["max_lat"]) if bounds else 0.0
+        self._min_lon = float(bounds["min_lon"]) if bounds else 0.0
+        self._max_lon = float(bounds["max_lon"]) if bounds else 0.0
 
         self._bounds_valid = (
             self._max_lat > self._min_lat and self._max_lon > self._min_lon
         )
         if not self._bounds_valid:
             self._logger.warning(
-                "Map bounds are invalid (min >= max). "
-                "Set min_lat, max_lat, min_lon, max_lon in config. "
+                "Map bounds are not configured or invalid. "
+                "Set the bounds field in config. "
                 "Vessels will not be drawn until bounds are configured."
             )
 
@@ -527,28 +524,12 @@ def get_config_schema() -> ConfigSchema:
                 default=300.0,
             ),
             ConfigField(
-                key="min_lat",
-                label="Minimum Latitude",
-                field_type=ConfigFieldType.FLOAT,
-                default=53.35,
-            ),
-            ConfigField(
-                key="max_lat",
-                label="Maximum Latitude",
-                field_type=ConfigFieldType.FLOAT,
-                default=53.47,
-            ),
-            ConfigField(
-                key="min_lon",
-                label="Minimum Longitude",
-                field_type=ConfigFieldType.FLOAT,
-                default=-3.10,
-            ),
-            ConfigField(
-                key="max_lon",
-                label="Maximum Longitude",
-                field_type=ConfigFieldType.FLOAT,
-                default=-2.90,
+                key="bounds",
+                label="Map Bounds",
+                field_type=ConfigFieldType.BBOX,
+                default=None,
+                required=False,
+                description="Geographic bounding box for the map. Requires a Mapbox API key and an active renderer.",
             ),
             ConfigField(
                 key="map_style",

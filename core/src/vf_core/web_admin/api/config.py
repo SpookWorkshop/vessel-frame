@@ -152,6 +152,15 @@ def _coerce_config_value(path: str, value: Any, pm: PluginManager) -> Any:
                 "lon": float(value["lon"]),
                 "rad": float(value["rad"]),
             }
+        elif ft == ConfigFieldType.BBOX:
+            if not isinstance(value, dict):
+                raise ValueError("Bbox value must be a dict with 'min_lon', 'min_lat', 'max_lon', 'max_lat' keys")
+            return {
+                "min_lon": float(value["min_lon"]),
+                "min_lat": float(value["min_lat"]),
+                "max_lon": float(value["max_lon"]),
+                "max_lat": float(value["max_lat"]),
+            }
         # JSON and unknown types: return as-is
         return value
     except Exception:
