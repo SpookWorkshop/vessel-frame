@@ -28,6 +28,16 @@ class VesselRepository:
             self._logger.error("Database not connected")
             return
 
+        # Detect legacy schema: vessels table with an 'mmsi' column.
+        cursor = await self._db_conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='vessels'"
+        )
+        if await cursor.fetchone():
+            cursor = await self._db_conn.execute("PRAGMA table_info(vessels)")
+            columns = {row[1] for row in await cursor.fetchall()}
+            if "mmsi" in columns:
+                await self._migrate_legacy_schema()
+
         await self._db_conn.execute("""
             CREATE TABLE IF NOT EXISTS vessels (
                 identifier  TEXT PRIMARY KEY,
@@ -43,6 +53,58 @@ class VesselRepository:
         """)
         await self._db_conn.commit()
 
+    async def _migrate_legacy_schema(self) -> None:
+        """
+        Migrate from the old per-column AIS schema to the generic extension JSON schema.
+
+        Packs imo, callsign, type, bow, stern, port, starboard, has_static_data, and
+        static_data_received into a JSON extension column. The 'mmsi' primary key
+        becomes 'identifier'. Runs inside a single transaction.
+        """
+        self._logger.info("Migrating vessels database.")
+        try:
+            await self._db_conn.execute("""
+                CREATE TABLE vessels_new (
+                    identifier  TEXT PRIMARY KEY,
+                    source_type TEXT NOT NULL DEFAULT 'ais',
+                    name        TEXT,
+                    first_sight INTEGER,
+                    last_sight  INTEGER,
+                    extension   TEXT
+                );
+            """)
+            await self._db_conn.execute("""
+                INSERT INTO vessels_new
+                    (identifier, source_type, name, first_sight, last_sight, extension)
+                SELECT
+                    mmsi,
+                    'ais',
+                    name,
+                    first_sight,
+                    last_sight,
+                    json_object(
+                        'mmsi',                 mmsi,
+                        'imo',                  imo,
+                        'callsign',             callsign,
+                        'ship_type',            type,
+                        'ship_type_name',       NULL,
+                        'bow',                  bow,
+                        'stern',                stern,
+                        'port',                 port,
+                        'starboard',            starboard,
+                        'has_static_data',      has_static_data,
+                        'static_data_received', static_data_received
+                    )
+                FROM vessels;
+            """)
+            await self._db_conn.execute("DROP TABLE vessels;")
+            await self._db_conn.execute("ALTER TABLE vessels_new RENAME TO vessels;")
+            await self._db_conn.commit()
+            self._logger.info("Database migration complete.")
+        except aiosqlite.Error:
+            self._logger.exception("Database migration failed")
+            await self._db_conn.rollback()
+            raise
 
     def _build_extension(self, vessel_data: dict[str, Any], has_static_data: bool) -> str:
         """Pack AIS-specific fields from vessel_data into a JSON extension string."""
