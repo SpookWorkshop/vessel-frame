@@ -110,6 +110,15 @@ async def update_config(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+def _require_dict_keys(value: Any, keys: tuple[str, ...], label: str) -> None:
+    """Raise ValueError if value is not a dict or is missing any of the required keys."""
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} value must be a dict with keys: {', '.join(keys)}")
+    missing = [k for k in keys if k not in value]
+    if missing:
+        raise ValueError(f"{label} value missing required keys: {', '.join(missing)}")
+
+
 def _coerce_config_value(path: str, value: Any, pm: PluginManager) -> Any:
     """
     Coerce a config value to the type declared in the plugin's schema.
@@ -145,16 +154,14 @@ def _coerce_config_value(path: str, value: Any, pm: PluginManager) -> Any:
                     ConfigFieldType.FILE, ConfigFieldType.SELECT):
             return str(value)
         elif ft == ConfigFieldType.ZONE:
-            if not isinstance(value, dict):
-                raise ValueError("Zone value must be a dict with 'lat', 'lon', 'rad' keys")
+            _require_dict_keys(value, ("lat", "lon", "rad"), "Zone")
             return {
                 "lat": float(value["lat"]),
                 "lon": float(value["lon"]),
                 "rad": float(value["rad"]),
             }
         elif ft == ConfigFieldType.BBOX:
-            if not isinstance(value, dict):
-                raise ValueError("Bbox value must be a dict with 'min_lon', 'min_lat', 'max_lon', 'max_lat' keys")
+            _require_dict_keys(value, ("min_lon", "min_lat", "max_lon", "max_lat"), "Bbox")
             return {
                 "min_lon": float(value["min_lon"]),
                 "min_lat": float(value["min_lat"]),
@@ -163,6 +170,8 @@ def _coerce_config_value(path: str, value: Any, pm: PluginManager) -> Any:
             }
         # JSON and unknown types: return as-is
         return value
+    except ValueError:
+        raise
     except Exception:
         logger.warning(f"Failed to coerce config value for '{path}', using raw value")
         return value
