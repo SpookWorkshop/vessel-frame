@@ -37,10 +37,15 @@ class VesselRepository:
         """)
         await self._db_conn.commit()
 
+    def _unpack_row(self, row: dict[str, Any]) -> dict[str, Any]:
         """
+        Unpack the extension JSON column into the flat vessel dict.
 
+        Sets a derived 'identified' flag, True when the vessel has extension
+        data (at least one static data message has been received).
         """
         extension_json = row.pop("extension", None)
+        row["identified"] = extension_json is not None
         if extension_json:
             try:
                 row.update(json.loads(extension_json))
@@ -48,22 +53,19 @@ class VesselRepository:
                 self._logger.warning("Failed to decode extension JSON for vessel")
         return row
 
-    async def upsert_vessel(
-        self, vessel_data: dict[str, Any], allow_static_update: bool
-    ) -> dict[str, Any] | None:
+    async def upsert_vessel(self, vessel_data: dict[str, Any]) -> dict[str, Any] | None:
         """
         Insert or update a vessel record in the database.
 
-        On first sighting the vessel is inserted with full extension data.
-        On subsequent updates, the record's last_sight timestamp is updated. Static fields
-        (name and extension) are updated only if allow_static_update is True.
-        static_data_received is preserved once set, never overwritten.
+        On first sighting the vessel is inserted. On subsequent updates,
+        last_sight is always refreshed. Name is updated only when present in
+        vessel_data. Extension is merged (not overwritten) when present, so
+        partial static messages (e.g. Type 24A/B) accumulate fields safely.
 
         Args:
-            vessel_data: Flat dict with identifier, source_type, name, and
-                source-type-specific fields used to build the extension JSON.
-            allow_static_update: Whether to update static information such
-              as name, type, or dimensions.
+            vessel_data: Dict containing at minimum 'identifier' and
+                'source_type'. Optional 'name' and 'extension' (dict) are
+                written when present.
 
         Returns:
             The upserted vessel record as a flat dict (extension unpacked),
@@ -73,14 +75,14 @@ class VesselRepository:
             self._logger.error("Database not connected")
             return None
 
-        has_static_data = bool(vessel_data.get("has_static_data", 0))
-        extension = self._build_extension(vessel_data, has_static_data)
+        has_name = "name" in vessel_data
+        has_extension = "extension" in vessel_data
 
         params = {
             "identifier":  vessel_data["identifier"],
-            "source_type": vessel_data.get("source_type", "ais"),
-            "name":        vessel_data.get("name", "Unknown"),
-            "extension":   extension,
+            "source_type": vessel_data.get("source_type", "unknown"),
+            "name":        vessel_data.get("name"),
+            "extension":   json.dumps(vessel_data["extension"]) if has_extension else None,
         }
 
         query = """

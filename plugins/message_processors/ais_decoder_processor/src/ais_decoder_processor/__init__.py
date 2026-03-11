@@ -12,14 +12,19 @@ from .ais_utils import get_vessel_full_type_name
 
 class AISDecoderProcessor(Plugin):
     """
-    Decode AIS messages from the bus and publish structured payloads.
+    Decode AIS messages from the bus and publish normalised vessel messages.
 
-    Uses `pyais` to parse incoming NMEA sentences. Incoming messages are read
-    from an input topic and fed into an internal queue. A separate task
-    decodes and publishes dictionaries to the output topic.
+    Uses `pyais` to parse incoming NMEA sentences. Invalid or non-ship messages
+    are filtered before publishing. Each published message uses a source-type-
+    agnostic format understood by VesselManager.
     """
 
     _DECODE_BATCH_SIZE: int = 10
+
+    # Fields consumed internally; never passed through as dynamic data
+    _WITHDRAWN_FIELDS: frozenset[str] = frozenset({
+        "mmsi", "msg_type", "repeat", "sentences", "spare", "spare2",
+    })
 
     def __init__(
         self,
@@ -189,12 +194,11 @@ class AISDecoderProcessor(Plugin):
 
     async def _decode_loop(self) -> None:
         """
-        Decode queued NMEA messages and publish structured dictionaries.
+        Decode queued NMEA messages and publish normalised vessel messages.
 
-        Any `bytes` values in the decoded dict are converted to UTF-8 strings
-        (with errors ignored) prior to publishing on the output topic.
+        Bytes values are converted to UTF-8 strings before normalisation.
+        Invalid or non-ship messages are silently discarded.
         """
-
         try:
             while True:
                 messages_processed = 0
@@ -209,22 +213,16 @@ class AISDecoderProcessor(Plugin):
                     try:
                         decoded_sentence: dict[str, Any] = ais_message.decode().asdict()
 
-                        msg_type = decoded_sentence.get('msg_type')
-                        mmsi = decoded_sentence.get('mmsi')
-                        
-                        self._logger.debug(f"Decoded: Type {msg_type}, MMSI {mmsi}")
+                        self._logger.debug(f"Decoded: Type {decoded_sentence.get('msg_type')}, MMSI {decoded_sentence.get('mmsi')}")
 
                         decoded_sentence = {
                             key: val.decode("utf-8", errors="ignore") if isinstance(val, bytes) else val
                             for key, val in decoded_sentence.items()
                         }
 
-                        if decoded_sentence.get('msg_type') == 5:
-                            decoded_sentence['ship_type_name'] = get_vessel_full_type_name(
-                                decoded_sentence.get('ship_type')
-                            )
-
-                        await self._bus.publish(self._out_topic, decoded_sentence)
+                        normalised = self._normalise(decoded_sentence)
+                        if normalised is not None:
+                            await self._bus.publish(self._out_topic, normalised)
                     except Exception:
                         self._logger.exception("Failed decoding message")
 

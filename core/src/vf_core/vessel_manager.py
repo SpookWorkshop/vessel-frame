@@ -106,13 +106,12 @@ class VesselManager:
                 )
                 ship_prev = db_vessel
 
-                # Publish first_seen event (first seen in this session, not ever)
                 await self._bus.publish(
                     self.EVENT_APPEARED,
                     {
                         "identifier": identifier,
                         "vessel": db_vessel,
-                        "known": db_vessel.get("has_static_data", False),
+                        "known": db_vessel.get("identified", False),
                     },
                 )
             else:
@@ -120,21 +119,28 @@ class VesselManager:
                 self._logger.info(f"New vessel detected: {identifier}")
                 await self._bus.publish(
                     self.EVENT_FIRST_SEEN,
-                    {"identifier": identifier, "has_static_data": has_static_data},
+                    {"identifier": identifier},
                 )
         else:
             ship_prev = self._vessels[identifier]
 
-        # Upsert to database (always insert, conditionally update static data)
-        ship = await self._vessel_repo.upsert_vessel(
-            values, allow_static_update=has_static_data
-        )
+        # Pass only the envelope fields to the repository
+        vessel_data: dict[str, Any] = {
+            "identifier":  message["identifier"],
+            "source_type": message["source_type"],
+        }
+        if "name" in message:
+            vessel_data["name"] = message["name"]
+        if "extension" in message:
+            vessel_data["extension"] = message["extension"]
+
+        ship = await self._vessel_repo.upsert_vessel(vessel_data)
         if ship is None:
             self._logger.error(f"Failed to record vessel {identifier}, skipping update")
             return
 
-        # Check if static data was just discovered
-        if has_static_data and not ship_prev.get("has_static_data", False):
+        # Fire identified event the first time we receive extension data
+        if "extension" in message and not ship_prev.get("identified", False):
             self._logger.info(
                 f"Vessel identified: {ship.get('name')} ({identifier}), "
                 f"Type: {ship.get('ship_type_name', 'Unknown')}"
@@ -143,23 +149,9 @@ class VesselManager:
                 self.EVENT_IDENTIFIED, {"identifier": identifier, "vessel": ship}
             )
 
-        # Extract dynamic data (position, speed etc.)
-        key_filter = [
-            "mmsi",
-            "msg_type",
-            "sentences",
-            "callsign",
-            "shipname",
-            "ship_type",
-            "ship_type_name",
-            "to_bow",
-            "to_stern",
-            "to_port",
-            "to_starboard",
-            "imo",
-            "has_static_data",
-        ]
-        dynamic_data = {k: v for k, v in message.items() if k not in key_filter}
+        # Everything outside the normalised envelope is dynamic positional data
+        _envelope = {"identifier", "source_type", "name", "extension"}
+        dynamic_data = {k: v for k, v in message.items() if k not in _envelope}
 
         # Update current zone
         zone_prev = ship_prev.get("zone")
@@ -304,12 +296,12 @@ class VesselManager:
         return list(self._vessels.values())
 
     def get_identified_vessels(self) -> list[dict[str, Any]]:
-        """Return all in-memory vessels for which we have identifying information (name, callsign)."""
-        return [v for v in self._vessels.values() if v.get("has_static_data")]
+        """Return all in-memory vessels for which static data has been received."""
+        return [v for v in self._vessels.values() if v.get("identified")]
 
     def get_unknown_vessels(self) -> list[dict[str, Any]]:
-        """Return all in-memory vessels for which we currently have not identifying information (name, callsign)."""
-        return [v for v in self._vessels.values() if not v.get("has_static_data")]
+        """Return all in-memory vessels for which no static data has been received yet."""
+        return [v for v in self._vessels.values() if not v.get("identified")]
 
     def get_vessels_in_zone(self, zone_name: str) -> list[dict[str, Any]]:
         """
