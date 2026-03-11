@@ -66,82 +66,34 @@ class VesselManager:
             async for msg in self._bus.subscribe(self._in_topic):
                 try:
                     await self._update_vessel(msg)
-                except Exception as e:
+                except Exception:
                     self._logger.exception("Exception in update_vessel")
 
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
             self._logger.info("Receive loop cancelled")
             raise
-        except Exception as e:
+        except Exception:
             self._logger.exception("Receive loop crashed")
             raise
 
-    def _is_message_valid(self, message: dict[str, Any]) -> bool:
-        """
-        Check whether a received decoded message should be processed.
-
-        Filters out non-ship MMSI numbers such as base stations and SAR aircraft.
-
-        Args:
-            message (dict[str, Any]): Decoded AIS message.
-
-        Returns:
-            bool: True if the message represents a valid ship, otherwise False.
-        """
-        mmsi = str(message["mmsi"])
-
-        # Ship MMSI must be exactly 9 digits. Anything else means it's
-        # a base station, navigation aid etc
-        if len(mmsi) != 9:
-            self._logger.debug(f"MMSI {mmsi} is not a ship. Skip update.")
-            return False
-
-        # If the first 3 values of MMSI are 111 this is a SAR aircraft
-        if mmsi.startswith("111"):
-            return False
-
-        return True
-
     async def _update_vessel(self, message: dict[str, Any]) -> None:
         """
-        Process an incoming decoded message and update vessel details.
+        Process an incoming normalised vessel message and update state.
 
-        Updates or inserts vessel information in memory and the repository,
-        determines zone membership, and publishes events for new, updated,
-        or moved vessels.
+        Updates or inserts the vessel record in the repository, determines
+        zone membership, and publishes events for new, updated, or moved vessels.
 
         Args:
-            message (dict[str, Any]): The decoded AIS message data.
+            message: Normalised vessel dict containing at minimum 'identifier'
+                and 'source_type'. Optional 'name' and 'extension' carry static
+                data; all other keys are treated as dynamic positional data.
         """
-        if not self._is_message_valid(message):
+        identifier = message.get("identifier")
+        if not identifier:
             return
 
-        msg_type = message["msg_type"]
-        identifier = str(message["mmsi"])
-
-        # Check if this is a new vessel we haven't seen before
         is_new_vessel = identifier not in self._vessels
-
-        # Type 5 messages have static data
-        has_static_data = msg_type == 5
-
-        # Prepare vessel data (always include defaults)
-        values = {
-            "identifier":     identifier,
-            "source_type":    "ais",
-            "mmsi":           identifier,
-            "imo":            message.get("imo", "0"),
-            "name":           message.get("shipname", "Unknown"),
-            "callsign":       message.get("callsign", "????"),
-            "ship_type":      message.get("ship_type", -1),
-            "ship_type_name": message.get("ship_type_name", "Unknown"),
-            "bow":            message.get("to_bow", 0),
-            "stern":          message.get("to_stern", 0),
-            "port":           message.get("to_port", 0),
-            "starboard":      message.get("to_starboard", 0),
-            "has_static_data": 1 if has_static_data else 0,
-        }
 
         # If new vessel, try to load from database first
         ship_prev = {}
