@@ -417,6 +417,51 @@ body {
 }
 
 /* -------------------------------------------------------
+   Bounds editor dialog
+------------------------------------------------------- */
+
+.bounds-dialog {
+  width: min(800px, 94vw);
+  padding: 0;
+}
+
+.bounds-dialog article {
+  margin: 0;
+}
+
+/* Map wrapper:
+   Overlay boxes are absolutely positioned children of the same element.
+   overflow:hidden clips the portrait box's large box-shadow to this area. */
+.bounds-map-wrap {
+  position: relative;
+  height: 450px;
+  overflow: hidden;
+  margin: 0 calc(-1 * var(--pico-block-spacing-horizontal));
+  width: calc(100% + 2 * var(--pico-block-spacing-horizontal));
+}
+
+/* Small label in the corner of each overlay box */
+.bounds-box-label {
+  position: absolute;
+  top: 5px;
+  left: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #0d9488;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* Landscape label sits in the dimmed area */
+.bounds-box-label-landscape {
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(13, 148, 136, 0.95);
+}
+
+/* -------------------------------------------------------
    Network page
 ------------------------------------------------------- */
 

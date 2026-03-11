@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { setConfigValue, AuthError } from '../api';
 import { useAppContext } from '../context';
 import { ZoneEditor } from './ZoneEditor';
+import { BoundsEditor } from './BoundsEditor';
 
 // Map-type field types that save themselves via their own modal.
 const MODAL_FIELD_TYPES = ['zone', 'bbox'];
@@ -46,7 +47,7 @@ export function ConfigForm({ schema, config, pluginName, mapboxKey }) {
     }
   }
 
-  const hasNonModalFields = schema.fields.some(f => !MODAL_FIELD_TYPES.includes(f.field_type));
+  const hasNonModalFields = schema.fields.some(f => !MODAL_FIELD_TYPES.includes(f.type));
 
   return (
     <form onSubmit={handleSave}>
@@ -59,6 +60,7 @@ export function ConfigForm({ schema, config, pluginName, mapboxKey }) {
           disabled={saving}
           mapboxKey={mapboxKey}
           pluginName={pluginName}
+          config={config}
         />
       ))}
 
@@ -75,7 +77,7 @@ export function ConfigForm({ schema, config, pluginName, mapboxKey }) {
   );
 }
 
-function FormField({ field, value, onChange, disabled, mapboxKey, pluginName }) {
+function FormField({ field, value, onChange, disabled, mapboxKey, pluginName, config }) {
   if (field.type === 'zone') {
     return (
       <ZoneField
@@ -85,6 +87,20 @@ function FormField({ field, value, onChange, disabled, mapboxKey, pluginName }) 
         disabled={disabled}
         mapboxKey={mapboxKey}
         pluginName={pluginName}
+      />
+    );
+  }
+
+  if (field.type === 'bbox') {
+    return (
+      <BboxField
+        field={field}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        mapboxKey={mapboxKey}
+        pluginName={pluginName}
+        config={config}
       />
     );
   }
@@ -148,6 +164,79 @@ function ZoneField({ field, value, onChange, disabled, mapboxKey, pluginName }) 
           mapboxKey={mapboxKey}
           pluginName={pluginName}
           fieldKey={field.key}
+          onSave={newValue => { onChange(newValue); }}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Replicates the orientation-swap logic from ImageRenderer.__init__ to derive
+// the actual canvas dimensions that map_screen will use.
+function getRendererDimensions(config) {
+  const rendererName = config?.plugins?.renderer?.[0];
+  if (!rendererName) return null;
+  const rc = config?.[rendererName];
+  const rawW = Number(rc?.width);
+  const rawH = Number(rc?.height);
+  if (!rawW || !rawH) return null;
+  const orientation = rc?.orientation ?? 'portrait';
+  if (
+    (orientation === 'portrait' && rawW > rawH) ||
+    (orientation === 'landscape' && rawH > rawW)
+  ) {
+    return { w: rawH, h: rawW };
+  }
+  return { w: rawW, h: rawH };
+}
+
+function fmtBbox(v) {
+  if (!v) return 'Not configured';
+  const ns = x => `${Math.abs(Number(x)).toFixed(4)}°${Number(x) >= 0 ? 'N' : 'S'}`;
+  const ew = x => `${Math.abs(Number(x)).toFixed(4)}°${Number(x) >= 0 ? 'E' : 'W'}`;
+  return `${ns(v.min_lat)}–${ns(v.max_lat)} · ${ew(v.min_lon)}–${ew(v.max_lon)}`;
+}
+
+function BboxField({ field, value, onChange, disabled, mapboxKey, pluginName, config }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const hasKey = !!mapboxKey;
+  const rendererDims = getRendererDimensions(config);
+
+  const canOpen = hasKey && !!rendererDims;
+
+  return (
+    <div class="zone-field">
+      <div class="zone-field-label">{field.label}</div>
+      <div class="zone-field-row">
+        <span class={value ? 'zone-summary' : 'zone-summary zone-unset'}>{fmtBbox(value)}</span>
+        <button
+          type="button"
+          class="outline"
+          style="width: auto; margin: 0;"
+          onClick={() => setModalOpen(true)}
+          disabled={disabled || !canOpen}
+        >
+          {value ? 'Edit bounds…' : 'Set bounds…'}
+        </button>
+      </div>
+      {!hasKey && (
+        <small class="save-status save-status-err">Set a Mapbox API key first</small>
+      )}
+      {hasKey && !rendererDims && (
+        <small class="save-status save-status-err">
+          Enable a renderer and set its width and height first
+        </small>
+      )}
+      {canOpen && field.description && <small>{field.description}</small>}
+      {modalOpen && (
+        <BoundsEditor
+          value={value}
+          mapboxKey={mapboxKey}
+          pluginName={pluginName}
+          fieldKey={field.key}
+          rendererW={rendererDims.w}
+          rendererH={rendererDims.h}
           onSave={newValue => { onChange(newValue); }}
           onClose={() => setModalOpen(false)}
         />
