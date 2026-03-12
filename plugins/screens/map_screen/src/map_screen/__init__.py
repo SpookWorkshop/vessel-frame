@@ -446,10 +446,10 @@ class MapScreen(ScreenPlugin):
         """Draw the vessel name near its marker."""
         name = vessel.get("name")
         if not name or name == "Unknown":
-            # Fall back to MMSI if no name
-            mmsi = vessel.get("mmsi")
-            if mmsi:
-                name = str(mmsi)
+            # Fall back to identifier if no name
+            identifier = vessel.get("identifier")
+            if identifier:
+                name = str(identifier)
             else:
                 return
             

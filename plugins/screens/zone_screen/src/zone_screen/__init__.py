@@ -10,7 +10,6 @@ from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin, require_plugin_args
 from vf_core.vessel_manager import VesselManager
 from vf_core.asset_manager import AssetManager
-from vf_core.ais_utils import get_vessel_full_type_name
 from vf_core.render_strategies import PeriodicRenderStrategy
 
 
@@ -120,8 +119,8 @@ class ZoneScreen(ScreenPlugin):
         if not vessel:
             return False
         
-        # Must have MMSI
-        if not vessel.get("mmsi"):
+        # Must have an identifier
+        if not vessel.get("identifier"):
             return False
 
         # Must have a known name (not None, not empty, not "Unknown")
@@ -458,7 +457,7 @@ class ZoneScreen(ScreenPlugin):
     ) -> int:
         """Draw the vessel name with an underline and return new y."""
         font = self._fonts["large"]
-        name = vessel.get("name", "Unknown")
+        name = vessel.get("name") or vessel.get("identifier") or "Unknown"
 
         text_width, text_height = self._get_text_size(font, name)
         center_x = width / 2 - text_width / 2
@@ -494,11 +493,11 @@ class ZoneScreen(ScreenPlugin):
         font = self._fonts["medium"]
 
         info_rows = [
-            {"label": "MMSI", "value": str(vessel.get("mmsi", "Unknown")), "icon": self._icons["id"]},
-            {"label": "Callsign", "value": str(vessel.get("callsign", "Unknown")), "icon": self._icons["callsign"]},
+            {"label": "MMSI", "value": vessel.get("identifier") or "Unknown", "icon": self._icons["id"]},
+            {"label": "Callsign", "value": vessel.get("callsign") or "Unknown", "icon": self._icons["callsign"]},
             {
                 "label": "Vessel Type",
-                "value": get_vessel_full_type_name(vessel.get("type", -1)),
+                "value": vessel.get("ship_type_name") or "Unknown",
                 "icon": self._icons["ship_type"]
             },
         ]

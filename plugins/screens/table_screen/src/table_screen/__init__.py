@@ -10,7 +10,6 @@ from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin, require_plugin_args
 from vf_core.vessel_manager import VesselManager
 from vf_core.asset_manager import AssetManager
-from vf_core.ais_utils import get_vessel_full_type_name
 from vf_core.render_strategies import PeriodicRenderStrategy
 
 
@@ -244,9 +243,9 @@ class TableScreen(ScreenPlugin):
         ship_name = vessel.get("name")
         # Fall back to the mmsi if we don't know the name
         if ship_name == "Unknown" or ship_name is None:
-            ship_name = vessel.get("mmsi") or "Unknown"
+            ship_name = vessel.get("identifier") or "Unknown"
 
-        ship_type = get_vessel_full_type_name(vessel.get("type", -1))
+        ship_type = vessel.get("ship_type_name") or "Unknown"
         timestamp = self._format_timestamp(vessel.get("ts", 0))
 
         name_x = x
@@ -283,8 +282,8 @@ class TableScreen(ScreenPlugin):
         }
 
         for vessel in vessels:
-            ship_name = vessel.get("name", "Unknown")
-            ship_type = get_vessel_full_type_name(vessel.get("type", -1))
+            ship_name = vessel.get("name") or vessel.get("identifier") or "Unknown"
+            ship_type = vessel.get("ship_type_name") or "Unknown"
             timestamp = self._format_timestamp(vessel.get("ts", 0))
 
             widths["name"] = max(widths["name"], self._get_text_width(font, ship_name))

@@ -192,7 +192,7 @@ async def run(argv: list[str] | None = None) -> int:
     bus = MessageBus()
     plugin_manager = PluginManager()
     vessel_repo = VesselRepository(args.db)
-    vessel_manager = VesselManager(bus, vessel_repo, in_topic="ais.decoded")
+    vessel_manager = VesselManager(bus, vessel_repo)
     network_manager = NetworkManager()
     asset_manager = AssetManager(Path(__file__).parent / "assets")
 
