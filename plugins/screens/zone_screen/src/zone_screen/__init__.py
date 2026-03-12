@@ -457,7 +457,7 @@ class ZoneScreen(ScreenPlugin):
     ) -> int:
         """Draw the vessel name with an underline and return new y."""
         font = self._fonts["large"]
-        name = vessel.get("name", "Unknown")
+        name = vessel.get("name") or vessel.get("identifier") or "Unknown"
 
         text_width, text_height = self._get_text_size(font, name)
         center_x = width / 2 - text_width / 2
@@ -493,11 +493,11 @@ class ZoneScreen(ScreenPlugin):
         font = self._fonts["medium"]
 
         info_rows = [
-            {"label": "MMSI", "value": str(vessel.get("identifier", "Unknown")), "icon": self._icons["id"]},
-            {"label": "Callsign", "value": str(vessel.get("callsign", "Unknown")), "icon": self._icons["callsign"]},
+            {"label": "MMSI", "value": vessel.get("identifier") or "Unknown", "icon": self._icons["id"]},
+            {"label": "Callsign", "value": vessel.get("callsign") or "Unknown", "icon": self._icons["callsign"]},
             {
                 "label": "Vessel Type",
-                "value": vessel.get("ship_type_name", "Unknown"),
+                "value": vessel.get("ship_type_name") or "Unknown",
                 "icon": self._icons["ship_type"]
             },
         ]

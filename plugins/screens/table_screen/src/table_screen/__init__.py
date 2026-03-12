@@ -245,7 +245,7 @@ class TableScreen(ScreenPlugin):
         if ship_name == "Unknown" or ship_name is None:
             ship_name = vessel.get("identifier") or "Unknown"
 
-        ship_type = vessel.get("ship_type_name", "Unknown")
+        ship_type = vessel.get("ship_type_name") or "Unknown"
         timestamp = self._format_timestamp(vessel.get("ts", 0))
 
         name_x = x
@@ -282,8 +282,8 @@ class TableScreen(ScreenPlugin):
         }
 
         for vessel in vessels:
-            ship_name = vessel.get("name", "Unknown")
-            ship_type = vessel.get("ship_type_name", "Unknown")
+            ship_name = vessel.get("name") or vessel.get("identifier") or "Unknown"
+            ship_type = vessel.get("ship_type_name") or "Unknown"
             timestamp = self._format_timestamp(vessel.get("ts", 0))
 
             widths["name"] = max(widths["name"], self._get_text_width(font, ship_name))

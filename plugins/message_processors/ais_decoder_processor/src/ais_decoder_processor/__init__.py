@@ -113,7 +113,7 @@ class AISDecoderProcessor(Plugin):
 
         # Tracks which decoded keys we've explicitly handled so the
         # dynamic pass-through below doesn't duplicate them.
-        handled = set(self._WITHDRAWN_FIELDS)
+        handled = {"mmsi", "msg_type", "repeat", "sentences", "spare", "spare2"}
 
         if msg_type == 5:
             name = decoded.get("shipname", "")
