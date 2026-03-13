@@ -160,7 +160,7 @@ class ScreenManager:
             return
 
         if not self._error_recoverable:
-            self._logger.warning("Received error_cleared for a non-recoverable error — ignoring")
+            self._logger.warning("Received error_cleared for a non-recoverable error")
             return
 
         self._in_error = False
@@ -181,7 +181,7 @@ class ScreenManager:
 
     async def _next_screen(self) -> None:
         """Switch to next screen."""
-        if not self._screens or len(self._screens) <= 1:
+        if not self._screens or len(self._screens) <= 1 or self._active_screen is None:
             return
 
         current_index = self._screens.index(self._active_screen)
@@ -189,7 +189,7 @@ class ScreenManager:
 
     async def _previous_screen(self) -> None:
         """Switch to previous screen."""
-        if not self._screens or len(self._screens) <= 1:
+        if not self._screens or len(self._screens) <= 1 or self._active_screen is None:
             return
 
         current_index = self._screens.index(self._active_screen)
@@ -198,9 +198,10 @@ class ScreenManager:
     async def _switch_to_screen(self, target_index: int) -> None:
         """Switch to a specific screen."""
         self._logger.info(
-            f"Switching from '{type(self._active_screen).__name__}' to '{type(self._screens[target_index]).__name__}'"
+            f"Switching from '{type(self._active_screen).__name__ if self._active_screen else 'None'}' to '{type(self._screens[target_index]).__name__}'"
         )
 
-        await self._active_screen.deactivate()
+        if self._active_screen:
+            await self._active_screen.deactivate()
         self._active_screen = self._screens[target_index]
         await self._active_screen.activate()
