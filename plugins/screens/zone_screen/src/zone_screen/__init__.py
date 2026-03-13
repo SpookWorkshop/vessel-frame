@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import datetime
+import os
 from typing import Any
 from contextlib import suppress
 from PIL import Image, ImageDraw, ImageFont
@@ -219,7 +220,8 @@ class ZoneScreen(ScreenPlugin):
         title_text = "Ship Tracker"
 
         subtitle_font = self._fonts["small"]
-        subtitle_text = datetime.datetime.now().strftime("%A - %d/%m/%y %H:%M")
+        date_format = os.getenv("DATE_FORMAT", "%d/%m/%y")
+        subtitle_text = datetime.datetime.now().strftime(f"%A - {date_format} %H:%M")
 
         draw.text((x, y), title_text, fill=self._palette["text"], font=title_font)
         y += self._get_text_height(title_font, title_text) + 4

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import datetime
+import os
 from typing import Any
 from contextlib import suppress
 from PIL import Image, ImageDraw, ImageFont
@@ -152,7 +153,8 @@ class TableScreen(ScreenPlugin):
         title_text = "Ship Tracker"
 
         subtitle_font = self._fonts["small"]
-        subtitle_text = datetime.datetime.now().strftime("%A - %d/%m/%y %H:%M")
+        date_format = os.getenv("DATE_FORMAT", "%d/%m/%y")
+        subtitle_text = datetime.datetime.now().strftime(f"%A - {date_format} %H:%M")
 
         icon = self._icons["vessel"]
         self._renderer.canvas.paste(icon, (x,y), icon)
