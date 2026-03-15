@@ -7,45 +7,16 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 _auth_data_path: Path | None = None
-_setup_lock_path: Path | None = None
-
 
 def init(data_dir: Path) -> None:
     """Initialise the auth module with the application data directory."""
-    global _auth_data_path, _setup_lock_path
+    global _auth_data_path
     _auth_data_path = data_dir / ".secrets" / "admin_auth.json"
-    _setup_lock_path = data_dir / ".secrets" / "admin_setup.lock"
-
-
-def _get_setup_lock_path() -> Path:
-    if _setup_lock_path is None:
-        raise RuntimeError("auth module not initialised — call auth.init(data_dir) first")
-    return _setup_lock_path
-
-
-def is_setup_locked() -> bool:
-    """Return True if setup has been completed and the endpoint should be closed."""
-    return _get_setup_lock_path().exists()
-
-
-def _create_setup_lock() -> None:
-    """Create the setup lockfile to permanently close the setup endpoint."""
-    path = _get_setup_lock_path()
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.touch()
-        try:
-            path.chmod(0o600)
-        except Exception:
-            pass  # Windows doesn't support chmod
-    except Exception:
-        logger.exception("Failed to create setup lock")
-        raise
 
 
 def _get_auth_data_path() -> Path:
     if _auth_data_path is None:
-        raise RuntimeError("auth module not initialised — call auth.init(data_dir) first")
+        raise RuntimeError("auth module not initialised, call auth.init(data_dir) first")
     return _auth_data_path
 
 
@@ -83,7 +54,6 @@ def set_admin_credentials(username: str, password_hash: str) -> None:
     auth_data["username"] = username
     auth_data["password_hash"] = password_hash
     _save_auth_data(auth_data)
-    _create_setup_lock()
     logger.info(f"Admin credentials set for user: {username}")
 
 def is_admin_configured() -> bool:
