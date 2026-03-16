@@ -61,7 +61,7 @@ class ScreenManager:
         for screen_name in configured_screens:
             try:
                 plugin_config = self._cm.get(screen_name)
-                kwargs = plugin_config if isinstance(plugin_config, dict) else {}
+                kwargs = dict(plugin_config) if isinstance(plugin_config, dict) else {}
 
                 # Inject system-level values that screens might need
                 if "mapbox_api_key" not in kwargs:
