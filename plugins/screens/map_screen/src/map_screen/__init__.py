@@ -220,7 +220,9 @@ class MapScreen(ScreenPlugin):
             self._logger.warning(f"Map image not found: {path.name}")
             return None
 
-        return Image.open(path)
+        with Image.open(path) as img:
+            img.load()
+            return img.copy()
 
     def _get_current_map(self) -> Image.Image | None:
         """Get the appropriate map image for the current canvas orientation."""
