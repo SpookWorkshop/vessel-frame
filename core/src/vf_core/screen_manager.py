@@ -61,7 +61,7 @@ class ScreenManager:
         for screen_name in configured_screens:
             try:
                 plugin_config = self._cm.get(screen_name)
-                kwargs = plugin_config if isinstance(plugin_config, dict) else {}
+                kwargs = dict(plugin_config) if isinstance(plugin_config, dict) else {}
 
                 # Inject system-level values that screens might need
                 if "mapbox_api_key" not in kwargs:
@@ -202,6 +202,9 @@ class ScreenManager:
         )
 
         if self._active_screen:
-            await self._active_screen.deactivate()
+            try:
+                await self._active_screen.deactivate()
+            except Exception:
+                self._logger.exception("Error deactivating screen during switch")
         self._active_screen = self._screens[target_index]
         await self._active_screen.activate()
