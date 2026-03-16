@@ -157,7 +157,7 @@ async def _init_plugins(
     for plugin_name in configured_plugins:
         try:
             plugin_config = config_manager.get(plugin_name)
-            kwargs = plugin_config if isinstance(plugin_config, dict) else {}
+            kwargs = dict(plugin_config) if isinstance(plugin_config, dict) else {}
             kwargs["bus"] = bus
             kwargs["data_dir"] = data_dir
 
