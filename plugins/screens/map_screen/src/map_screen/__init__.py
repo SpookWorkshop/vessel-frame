@@ -55,6 +55,8 @@ class MapScreen(ScreenPlugin):
     # Marker size when drawing dots
     DOT_RADIUS = 5
 
+    DOWNLOAD_TIMEOUT: float = 30.0
+
     def __init__(
         self,
         *,
@@ -94,6 +96,14 @@ class MapScreen(ScreenPlugin):
         self._vessel_outline = vessel_outline_colour
 
         # Parse bounds
+        bounds_keys = ("min_lat", "max_lat", "min_lon", "max_lon")
+        if bounds and not all(k in bounds for k in bounds_keys):
+            self._logger.warning(
+                f"Map bounds config is missing required keys "
+                f"{[k for k in bounds_keys if k not in bounds]}. Bounds will be ignored."
+            )
+            bounds = None
+
         self._min_lat = float(bounds["min_lat"]) if bounds else 0.0
         self._max_lat = float(bounds["max_lat"]) if bounds else 0.0
         self._min_lon = float(bounds["min_lon"]) if bounds else 0.0
@@ -190,7 +200,14 @@ class MapScreen(ScreenPlugin):
                     f"{bounds}/{width}x{height}?access_token={self._mapbox_key}"
                 )
                 self._logger.debug(f"Mapbox URL: {url}")
-                urllib.request.urlretrieve(url, img_path)
+                tmp_path = img_path.with_suffix(".tmp")
+                try:
+                    with urllib.request.urlopen(url, timeout=self.DOWNLOAD_TIMEOUT) as response:
+                        tmp_path.write_bytes(response.read())
+                    tmp_path.replace(img_path)
+                except Exception:
+                    tmp_path.unlink(missing_ok=True)
+                    raise
                 self._logger.info(f"Downloaded map image: {img_path}")
             except Exception:
                 self._logger.exception(f"Failed to download map image: {name}")
@@ -220,7 +237,9 @@ class MapScreen(ScreenPlugin):
             self._logger.warning(f"Map image not found: {path.name}")
             return None
 
-        return Image.open(path)
+        with Image.open(path) as img:
+            img.load()
+            return img.copy()
 
     def _get_current_map(self) -> Image.Image | None:
         """Get the appropriate map image for the current canvas orientation."""
@@ -233,6 +252,12 @@ class MapScreen(ScreenPlugin):
         """Start listening for updates and enable periodic rendering."""
         if self._task and not self._task.done():
             return
+
+        # Retry downloading map images if they failed during init
+        if self._map_portrait is None or self._map_landscape is None:
+            self._ensure_map_images()
+            self._map_portrait = self._load_map_image("map_portrait")
+            self._map_landscape = self._load_map_image("map_landscape")
 
         await self._render_strategy.start()
         self._render_strategy.request_render()
