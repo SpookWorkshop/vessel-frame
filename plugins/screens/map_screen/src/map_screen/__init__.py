@@ -55,6 +55,8 @@ class MapScreen(ScreenPlugin):
     # Marker size when drawing dots
     DOT_RADIUS = 5
 
+    DOWNLOAD_TIMEOUT: float = 30.0
+
     def __init__(
         self,
         *,
@@ -190,7 +192,8 @@ class MapScreen(ScreenPlugin):
                     f"{bounds}/{width}x{height}?access_token={self._mapbox_key}"
                 )
                 self._logger.debug(f"Mapbox URL: {url}")
-                urllib.request.urlretrieve(url, img_path)
+                with urllib.request.urlopen(url, timeout=self.DOWNLOAD_TIMEOUT) as response:
+                    img_path.write_bytes(response.read())
                 self._logger.info(f"Downloaded map image: {img_path}")
             except Exception:
                 self._logger.exception(f"Failed to download map image: {name}")
