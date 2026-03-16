@@ -202,6 +202,9 @@ class ScreenManager:
         )
 
         if self._active_screen:
-            await self._active_screen.deactivate()
+            try:
+                await self._active_screen.deactivate()
+            except Exception:
+                self._logger.exception("Error deactivating screen during switch")
         self._active_screen = self._screens[target_index]
         await self._active_screen.activate()
