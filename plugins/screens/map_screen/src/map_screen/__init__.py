@@ -192,8 +192,14 @@ class MapScreen(ScreenPlugin):
                     f"{bounds}/{width}x{height}?access_token={self._mapbox_key}"
                 )
                 self._logger.debug(f"Mapbox URL: {url}")
-                with urllib.request.urlopen(url, timeout=self.DOWNLOAD_TIMEOUT) as response:
-                    img_path.write_bytes(response.read())
+                tmp_path = img_path.with_suffix(".tmp")
+                try:
+                    with urllib.request.urlopen(url, timeout=self.DOWNLOAD_TIMEOUT) as response:
+                        tmp_path.write_bytes(response.read())
+                    tmp_path.replace(img_path)
+                except Exception:
+                    tmp_path.unlink(missing_ok=True)
+                    raise
                 self._logger.info(f"Downloaded map image: {img_path}")
             except Exception:
                 self._logger.exception(f"Failed to download map image: {name}")
