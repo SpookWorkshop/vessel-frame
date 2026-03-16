@@ -204,31 +204,33 @@ async def run(argv: list[str] | None = None) -> int:
         logger.exception(f"Failed to load config from {args.config}")
         return 1
 
-    admin_task = asyncio.create_task(start_admin_server(config_manager, plugin_manager, network_manager, host="0.0.0.0"))
-    admin_task.add_done_callback(
-        partial(_log_admin_status, stop_event=stop_event, logger=logger)
-    )
-
-    # Track all plugins for cleanup
+    admin_task: asyncio.Task | None = None
     sources: list[Plugin] = []
     processors: list[Plugin] = []
+    controllers: list[Plugin] = []
+    screen_manager: ScreenManager | None = None
 
-    await vessel_repo.start()
-    await vessel_manager.start()
+    try:
+        admin_task = asyncio.create_task(start_admin_server(config_manager, plugin_manager, network_manager, host="0.0.0.0"))
+        admin_task.add_done_callback(
+            partial(_log_admin_status, stop_event=stop_event, logger=logger)
+        )
 
-    sources = await _init_plugins(
-        config_manager, plugin_manager, bus, "sources", GROUP_SOURCES, logger, args.data_dir
-    )
-    processors = await _init_plugins(
-        config_manager, plugin_manager, bus, "processors", GROUP_PROCESSORS, logger, args.data_dir
-    )
-    controllers = await _init_plugins(
-        config_manager, plugin_manager, bus, "controllers", GROUP_CONTROLLERS, logger, args.data_dir
-    )
+        await vessel_repo.start()
+        await vessel_manager.start()
 
-    if not sources:
-        logger.warning("No sources started")
+        sources = await _init_plugins(
+            config_manager, plugin_manager, bus, "sources", GROUP_SOURCES, logger, args.data_dir
+        )
+        processors = await _init_plugins(
+            config_manager, plugin_manager, bus, "processors", GROUP_PROCESSORS, logger, args.data_dir
+        )
+        controllers = await _init_plugins(
+            config_manager, plugin_manager, bus, "controllers", GROUP_CONTROLLERS, logger, args.data_dir
+        )
 
+        if not sources:
+            logger.warning("No sources started")
 
         # Set up the renderer
         # configured_renderers is an array to conform to the same patterns as other plugins
@@ -243,14 +245,13 @@ async def run(argv: list[str] | None = None) -> int:
                 GROUP_RENDERER, configured_renderer, **kwargs
             )
 
-        screen_manager = ScreenManager(bus, plugin_manager, renderer, vessel_manager, cm=config_manager, asset_manager=asset_manager, data_dir=args.data_dir)
-        await screen_manager.start()
-    else:
-        logger.warning("No renderer created")
+            screen_manager = ScreenManager(bus, plugin_manager, renderer, vessel_manager, cm=config_manager, asset_manager=asset_manager, data_dir=args.data_dir)
+            await screen_manager.start()
+        else:
+            logger.warning("No renderer created")
 
-    logger.info("System running. Press Ctrl+C to stop.")
+        logger.info("System running. Press Ctrl+C to stop.")
 
-    try:
         if sys.platform != "win32":
             loop = asyncio.get_running_loop()
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -266,7 +267,7 @@ async def run(argv: list[str] | None = None) -> int:
 
         # Stop the admin server
         logger.info("Stopping admin server...")
-        if not admin_task.done():
+        if admin_task is not None and not admin_task.done():
             admin_task.cancel()
             with suppress(asyncio.CancelledError):
                 await admin_task
