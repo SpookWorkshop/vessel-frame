@@ -12,6 +12,9 @@ from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldT
 class COMMessageSource(Plugin):
     """Source plugin that reads AIS messages from a serial COM port."""
 
+    CONNECT_TIMEOUT: float = 10.0
+    RECONNECT_DELAY: float = 5.0
+
     def __init__(
         self,
         *,
@@ -27,7 +30,6 @@ class COMMessageSource(Plugin):
         self._topic = topic
         self._baud_rate = baud_rate
         self._port = port
-        self._serial = None
         self._task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -44,9 +46,9 @@ class COMMessageSource(Plugin):
 
     async def stop(self) -> None:
         """
-        Stop the serial read loop and close the connection.
+        Stop the serial read loop.
 
-        Cancels the background task and closes the serial port if open.
+        Cancels the background task and waits for it to finish.
         """
         if self._task and not self._task.done():
             self._task.cancel()
@@ -54,35 +56,53 @@ class COMMessageSource(Plugin):
             with suppress(asyncio.CancelledError):
                 await self._task
 
-        if self._serial is not None:
-            self._serial.close()
-
     async def _loop(self) -> None:
         """
         Continuously read from the serial port and publish messages.
 
-        Opens the serial connection asynchronously using `serial_asyncio` and
-        reads lines indefinitely. Each valid line is published to the
-        message bus.
-
-        Logs and continues on errors.
+        Attempts to open the serial connection within CONNECT_TIMEOUT seconds.
+        On success, reads lines indefinitely and publishes each to the message
+        bus. On failure (timeout, device unplug, read error), logs the problem
+        and retries after RECONNECT_DELAY seconds.
         """
-        try:
-            reader, writer = await serial_asyncio.open_serial_connection(
-                url=self._port, baudrate=self._baud_rate
-            )
+        while True:
+            writer = None
+            try:
+                self._logger.info(f"Connecting to {self._port} at {self._baud_rate} baud...")
+                reader, writer = await asyncio.wait_for(
+                    serial_asyncio.open_serial_connection(url=self._port, baudrate=self._baud_rate),
+                    timeout=self.CONNECT_TIMEOUT,
+                )
+                self._logger.info(f"Connected to {self._port}")
 
-            while True:
-                line = await reader.readline()
-                if line:
+                while True:
+                    line = await reader.readline()
+                    if not line:
+                        self._logger.warning(f"Serial port {self._port} closed (EOF)")
+                        break
                     message = line.decode("ascii", errors="ignore").strip()
                     if message:
                         await self._bus.publish(self._topic, message)
+                    await asyncio.sleep(0)
 
-                # Give other tasks a chance to run
-                await asyncio.sleep(0)
-        except Exception:
-            self._logger.exception("COM message source error")
+            except asyncio.CancelledError:
+                raise
+            except asyncio.TimeoutError:
+                self._logger.warning(
+                    f"Timed out connecting to {self._port}, "
+                    f"retrying in {self.RECONNECT_DELAY}s"
+                )
+            except Exception:
+                self._logger.exception(
+                    f"Serial connection error on {self._port}, "
+                    f"reconnecting in {self.RECONNECT_DELAY}s"
+                )
+            finally:
+                if writer is not None:
+                    with suppress(Exception):
+                        writer.close()
+
+            await asyncio.sleep(self.RECONNECT_DELAY)
 
 
 def get_config_schema() -> ConfigSchema:
