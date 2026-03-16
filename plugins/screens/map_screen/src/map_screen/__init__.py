@@ -96,6 +96,14 @@ class MapScreen(ScreenPlugin):
         self._vessel_outline = vessel_outline_colour
 
         # Parse bounds
+        bounds_keys = ("min_lat", "max_lat", "min_lon", "max_lon")
+        if bounds and not all(k in bounds for k in bounds_keys):
+            self._logger.warning(
+                f"Map bounds config is missing required keys "
+                f"{[k for k in bounds_keys if k not in bounds]}. Bounds will be ignored."
+            )
+            bounds = None
+
         self._min_lat = float(bounds["min_lat"]) if bounds else 0.0
         self._max_lat = float(bounds["max_lat"]) if bounds else 0.0
         self._min_lon = float(bounds["min_lon"]) if bounds else 0.0
