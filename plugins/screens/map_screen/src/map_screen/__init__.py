@@ -82,7 +82,7 @@ class MapScreen(ScreenPlugin):
         self._in_topic = in_topic
         self._task: asyncio.Task[None] | None = None
         self._palette = renderer.palette
-        self._map_style = map_style
+        self._map_style = map_style.removeprefix("mapbox://styles/")
         self._cache_dir = data_dir / "map_cache"
         self._mapbox_key = mapbox_api_key
 
