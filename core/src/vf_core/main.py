@@ -229,19 +229,19 @@ async def run(argv: list[str] | None = None) -> int:
     if not sources:
         logger.warning("No sources started")
 
-    # Set up the renderer
-    screen_manager: ScreenManager | None = None
-    configured_renderers = config_manager.get("plugins.renderer", None)
-    if configured_renderers is not None:
+
+        # Set up the renderer
         # configured_renderers is an array to conform to the same patterns as other plugins
         # but only one renderer can be active, so we take the first one from the list.
-        configured_renderer = configured_renderers[0]
-        renderer_config = config_manager.get(configured_renderer)
-        kwargs = renderer_config if isinstance(renderer_config, dict) else {}
-        kwargs["data_dir"] = args.data_dir
-        renderer: RendererPlugin = plugin_manager.create(
-            GROUP_RENDERER, configured_renderer, **kwargs
-        )
+        configured_renderers = config_manager.get("plugins.renderer", None)
+        if configured_renderers:
+            configured_renderer = configured_renderers[0]
+            renderer_config = config_manager.get(configured_renderer)
+            kwargs = dict(renderer_config) if isinstance(renderer_config, dict) else {}
+            kwargs["data_dir"] = args.data_dir
+            renderer: RendererPlugin = plugin_manager.create(
+                GROUP_RENDERER, configured_renderer, **kwargs
+            )
 
         screen_manager = ScreenManager(bus, plugin_manager, renderer, vessel_manager, cm=config_manager, asset_manager=asset_manager, data_dir=args.data_dir)
         await screen_manager.start()
