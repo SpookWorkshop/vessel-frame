@@ -77,6 +77,7 @@ echo "  - Install system dependencies"
 echo "  - Enable I2C and SPI"
 echo "  - Set up a Python virtual environment"
 echo "  - Install core and plugins"
+echo "  - Create /var/lib/vessel-frame data directory"
 echo "  - Configure systemd services"
 echo ""
 read -p "Continue? [y/N] " -n 1 -r
@@ -244,7 +245,21 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}Step 8: Setting up systemd services${NC}"
+echo -e "${GREEN}Step 8: Creating data directory${NC}"
+
+if [ ! -d "/var/lib/vessel-frame" ]; then
+    sudo mkdir -p /var/lib/vessel-frame
+    sudo chown $USER:$USER /var/lib/vessel-frame
+    sudo chmod 700 /var/lib/vessel-frame
+    echo -e "${GREEN}Data directory created: /var/lib/vessel-frame${NC}"
+else
+    echo -e "${YELLOW}Data directory already exists${NC}"
+    # Make sure ownership is correct anyway
+    sudo chown $USER:$USER /var/lib/vessel-frame
+fi
+
+echo ""
+echo -e "${GREEN}Step 9: Setting up systemd services${NC}"
 
 # Get the current username and home directory
 USERNAME=$USER
@@ -327,7 +342,7 @@ sudo chmod 0440 /etc/sudoers.d/vessel-frame
 echo -e "${GREEN}Sudo permissions configured${NC}"
 
 echo ""
-echo -e "${GREEN}Step 9: Configuring hostapd and dhcpcd${NC}"
+echo -e "${GREEN}Step 10: Configuring hostapd and dhcpcd${NC}"
 
 # Configure hostapd
 echo "Configuring hostapd..."
