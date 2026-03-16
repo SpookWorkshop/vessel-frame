@@ -29,7 +29,7 @@ async def setup_admin(request: AuthRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin already configured")
 
     # Hash password
-    password_hash = ph.hash(request.password.encode())
+    password_hash = ph.hash(request.password)
 
     # Store credentials
     set_admin_credentials(request.username, password_hash)
@@ -55,7 +55,7 @@ async def login(
 
     # Verify password
     try:
-        ph.verify(credentials["password_hash"].encode(), request.password.encode())
+        ph.verify(credentials["password_hash"], request.password)
     except VerifyMismatchError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
