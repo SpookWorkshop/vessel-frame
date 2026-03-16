@@ -239,6 +239,12 @@ class MapScreen(ScreenPlugin):
         if self._task and not self._task.done():
             return
 
+        # Retry downloading map images if they failed during init
+        if self._map_portrait is None or self._map_landscape is None:
+            self._ensure_map_images()
+            self._map_portrait = self._load_map_image("map_portrait")
+            self._map_landscape = self._load_map_image("map_landscape")
+
         await self._render_strategy.start()
         self._render_strategy.request_render()
         self._task = asyncio.create_task(self._update_loop())
