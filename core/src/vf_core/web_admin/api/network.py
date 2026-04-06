@@ -133,6 +133,29 @@ async def set_ap_mode(request: Request, config: APModeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/mode/offline", dependencies=[Depends(verify_token)])
+async def set_offline_mode(request: Request):
+    """Schedule offline mode (all wireless disabled) for next reboot."""
+    try:
+        network_manager = request.app.state.network_manager
+        success, message = network_manager.schedule_mode_change('offline')
+
+        if success:
+            return {
+                "success": True,
+                "message": "Offline mode scheduled. Please reboot the device for changes to take effect.",
+                "requires_reboot": True,
+            }
+        else:
+            raise HTTPException(status_code=500, detail=message)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error setting offline mode: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/mode/client", dependencies=[Depends(verify_token)])
 async def set_client_mode(request: Request, config: ClientModeRequest):
     """Configure and schedule client mode

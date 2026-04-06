@@ -13,7 +13,7 @@ import asyncio
 class NetworkConfig:
     """Network config data structure"""
 
-    mode: str = "client"  # "ap" or "client"
+    mode: str = "client"  # "ap", "client" or "offline"
     ap_ssid: str = "vessel-frame"
     ap_password: str = "spook_workshop"
     ap_channel: int = 6
@@ -83,7 +83,7 @@ class NetworkManager:
         """Detect current network mode by checking running services
 
         Returns:
-            str: 'ap', 'client' or 'unknown'
+            str: 'ap', 'client' or 'offline'
         """
         try:
             # Check if hostapd is running
@@ -102,11 +102,11 @@ class NetworkManager:
             )
             if result.returncode == 0 and result.stdout.strip():
                 return "client"
-            
-            return "unknown"
+
+            return "offline"
         except Exception as e:
             self._logger.error(f"Error detecting network mode: {e}")
-            return "unknown"
+            return "offline"
 
     async def scan_networks_async(self) -> List[Dict[str, any]]:
         """Scan for available networks asynchronously

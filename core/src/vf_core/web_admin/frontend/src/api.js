@@ -193,6 +193,12 @@ export async function scanNetworks() {
   return res.json()
 }
 
+export async function setOfflineMode() {
+  const res = await apiFetch('/api/network/mode/offline', { method: 'POST' })
+  if (!res.ok) throw new Error('Failed to set offline mode')
+  return res.json()
+}
+
 export async function setAPMode(ssid, password, channel) {
   const res = await apiFetch('/api/network/mode/ap', {
     method: 'POST',
