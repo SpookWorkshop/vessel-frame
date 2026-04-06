@@ -115,9 +115,9 @@ class ScreenManager:
             action = message.get("action")
 
             if action == "next":
-                await self._next_screen()
+                await self._show_next_screen()
             elif action == "previous":
-                await self._previous_screen()
+                await self._show_previous_screen()
 
     async def _error_loop(self) -> None:
         """Listen for system error events and switch to the error screen."""
@@ -179,7 +179,7 @@ class ScreenManager:
         except Exception:
             self._logger.exception("Failed to restore screen after error cleared")
 
-    async def _next_screen(self) -> None:
+    async def _show_next_screen(self) -> None:
         """Switch to next screen."""
         if not self._screens or len(self._screens) <= 1 or self._active_screen is None:
             return
@@ -187,7 +187,7 @@ class ScreenManager:
         current_index = self._screens.index(self._active_screen)
         await self._switch_to_screen((current_index + 1) % len(self._screens))
 
-    async def _previous_screen(self) -> None:
+    async def _show_previous_screen(self) -> None:
         """Switch to previous screen."""
         if not self._screens or len(self._screens) <= 1 or self._active_screen is None:
             return
