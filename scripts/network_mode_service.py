@@ -191,18 +191,40 @@ network={{
         
         return False
 
+def configure_offline_mode() -> bool:
+    """Disable all wireless networking"""
+
+    logger.info("Configuring offline mode")
+
+    try:
+        subprocess.run(['systemctl', 'stop', 'hostapd'], check=False)
+        subprocess.run(['systemctl', 'stop', 'dnsmasq'], check=False)
+        subprocess.run(['systemctl', 'stop', 'NetworkManager'], check=False)
+        subprocess.run(['systemctl', 'stop', 'wpa_supplicant'], check=False)
+        subprocess.run(['ip', 'link', 'set', INTERFACE, 'down'], check=False)
+
+        logger.info("Offline mode configured successfully")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error configuring offline mode: {e}", exc_info=True)
+        return False
+
+
 def main():
     logger.info("Starting network mode config")
-    
+
     config = load_config()
     mode = config.get('mode', 'client')
-    
+
     logger.info(f"Network mode: {mode}")
-    
+
     if mode == 'ap':
         success = configure_ap_mode(config)
     elif mode == 'client':
         success = configure_client_mode(config)
+    elif mode == 'offline':
+        success = configure_offline_mode()
     else:
         logger.error(f"Unknown mode: {mode}")
         success = False

@@ -13,7 +13,7 @@ import asyncio
 class NetworkConfig:
     """Network config data structure"""
 
-    mode: str = "client"  # "ap" or "client"
+    mode: str = "client"  # "ap", "client" or "offline"
     ap_ssid: str = "vessel-frame"
     ap_password: str = "spook_workshop"
     ap_channel: int = 6
@@ -83,7 +83,7 @@ class NetworkManager:
         """Detect current network mode by checking running services
 
         Returns:
-            str: 'ap', 'client' or 'unknown'
+            str: 'ap', 'client' or 'offline'
         """
         try:
             # Check if hostapd is running
@@ -102,11 +102,11 @@ class NetworkManager:
             )
             if result.returncode == 0 and result.stdout.strip():
                 return "client"
-            
-            return "unknown"
+
+            return "offline"
         except Exception as e:
             self._logger.error(f"Error detecting network mode: {e}")
-            return "unknown"
+            return "offline"
 
     async def scan_networks_async(self) -> List[Dict[str, any]]:
         """Scan for available networks asynchronously
@@ -268,20 +268,14 @@ class NetworkManager:
     def get_config_dict(self) -> dict:
         """Get current configuration as a dictionary
 
-        Passwords are masked for security.
+        Passwords are omitted (write only) and returned as None.
 
         Returns:
             Dictionary of current configuration
         """
         config = self.config.to_dict()
-
-        # Mask passwords
-        if config.get("ap_password"):
-            config["ap_password"] = "****"
-            
-        if config.get("client_password"):
-            config["client_password"] = "****"
-
+        config["ap_password"] = None
+        config["client_password"] = None
         return config
 
     def update_ap_config(
@@ -326,7 +320,7 @@ class NetworkManager:
     def update_client_config(
         self,
         ssid: str,
-        password: str,
+        password: Optional[str] = None,
         auto_fallback: Optional[bool] = None,
         fallback_timeout: Optional[int] = None,
     ) -> Tuple[bool, str]:
@@ -334,7 +328,7 @@ class NetworkManager:
 
         Args:
             ssid: Network SSID to connect to
-            password: Network password
+            password: Network password. Pass None to keep the existing password.
             auto_fallback: Whether to fall back to AP mode on failure
             fallback_timeout: Seconds to wait before falling back
 
@@ -346,7 +340,8 @@ class NetworkManager:
                 return False, "SSID cannot be empty"
 
             self.config.client_ssid = ssid.strip()
-            self.config.client_password = password
+            if password is not None:
+                self.config.client_password = password
 
             if auto_fallback is not None:
                 self.config.auto_fallback = auto_fallback

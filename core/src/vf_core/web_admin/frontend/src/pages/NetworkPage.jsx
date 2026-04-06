@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import {
   getNetworkStatus, getNetworkConfig, scanNetworks,
-  setAPMode, setClientMode, AuthError,
+  setAPMode, setClientMode, setOfflineMode, AuthError,
 } from '../api';
 import { useAppContext } from '../context';
 
@@ -32,6 +32,7 @@ export function NetworkPage() {
       <NetworkStatus status={status} onRefresh={load} />
       <APModeForm config={config} onSaved={load} />
       <ClientModeForm config={config} onSaved={load} />
+      <OfflineModeForm onSaved={load} />
     </div>
   );
 }
@@ -44,16 +45,16 @@ function NetworkStatus({ status, onRefresh }) {
   const modeLabel = {
     ap: 'Access Point',
     client: 'Client',
-    off: 'Off',
+    offline: 'Offline',
   };
 
   const modeBadgeClass = {
     ap: 'badge-mode-ap',
     client: 'badge-mode-client',
-    off: 'badge-disabled',
+    offline: 'badge-disabled',
   };
 
-  const actual = status.actual_mode ?? 'off';
+  const actual = status.actual_mode ?? 'offline';
 
   return (
     <section class="plugin-section">
@@ -161,7 +162,8 @@ function APModeForm({ config, onSaved }) {
 function ClientModeForm({ config, onSaved }) {
   const { onAuthError } = useAppContext();
   const [ssid, setSsid] = useState(config.client_ssid ?? '');
-  const [password, setPassword] = useState(config.client_password ?? '');
+  const [password, setPassword] = useState('');
+  const [openNetwork, setOpenNetwork] = useState(false);
   const [autoFallback, setAutoFallback] = useState(config.auto_fallback ?? false);
   const [fallbackTimeout, setFallbackTimeout] = useState(config.fallback_timeout ?? 60);
   const [networks, setNetworks] = useState(null);
@@ -188,7 +190,8 @@ function ClientModeForm({ config, onSaved }) {
     setSaving(true);
     setStatus(null);
     try {
-      await setClientMode(ssid, password || null, autoFallback, Number(fallbackTimeout));
+      const passwordToSend = openNetwork ? '' : (password || null);
+      await setClientMode(ssid, passwordToSend, autoFallback, Number(fallbackTimeout));
       setStatus('success');
       onSaved();
     } catch (err) {
@@ -234,11 +237,21 @@ function ClientModeForm({ config, onSaved }) {
             </div>
           )}
 
-          <label htmlFor="client-password">
-            Password
-            <input id="client-password" type="password" maxLength={63} value={password}
-                   onInput={e => setPassword(e.target.value)} disabled={saving} />
+          <label htmlFor="open-network" class="checkbox-label">
+            <input id="open-network" type="checkbox" role="switch"
+                   checked={openNetwork} onChange={e => setOpenNetwork(e.target.checked)}
+                   disabled={saving} />
+            Open network (no password)
           </label>
+
+          {!openNetwork && (
+            <label htmlFor="client-password">
+              Password
+              <input id="client-password" type="password" maxLength={63} value={password}
+                     onInput={e => setPassword(e.target.value)} disabled={saving}
+                     placeholder="Leave blank to keep existing" />
+            </label>
+          )}
 
           <label htmlFor="auto-fallback" class="checkbox-label">
             <input id="auto-fallback" type="checkbox" role="switch"
@@ -262,6 +275,65 @@ function ClientModeForm({ config, onSaved }) {
 
           <button type="submit" aria-busy={saving} disabled={saving} style="width: auto;">
             Switch to Client Mode
+          </button>
+        </form>
+      </article>
+    </section>
+  );
+}
+
+// -------------------------------------------------------
+// Offline mode
+// -------------------------------------------------------
+
+function OfflineModeForm({ onSaved }) {
+  const { onAuthError } = useAppContext();
+  const [confirmed, setConfirmed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    setStatus(null);
+    try {
+      await setOfflineMode();
+      setStatus('success');
+      onSaved();
+    } catch (err) {
+      if (err instanceof AuthError) { onAuthError(); return; }
+      setStatus(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section class="plugin-section">
+      <h3>Offline Mode</h3>
+      <article class="plugin-card">
+        <p>
+          Offline mode disables all wireless networking on the device. Once active,
+          the admin panel will be unreachable over WiFi.
+        </p>
+        <p><strong>Before switching to offline mode, ensure USB gadget mode is enabled.</strong></p>
+        <p>
+          Without it, you will have no way to reach the admin panel to re-enable networking
+          without physically re-imaging the SD card.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="offline-confirm" class="checkbox-label">
+            <input id="offline-confirm" type="checkbox" role="switch"
+                   checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
+                   disabled={saving} />
+            I understand I need USB gadget mode to recover network access
+          </label>
+
+          {status === 'success' && <p class="save-status save-status-ok">Saved! Changes apply on next reboot</p>}
+          {status && status !== 'success' && <p class="save-status save-status-err">{status}</p>}
+
+          <button type="submit" aria-busy={saving} disabled={saving || !confirmed} style="width: auto;">
+            Switch to Offline Mode
           </button>
         </form>
       </article>
