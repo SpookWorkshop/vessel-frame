@@ -161,7 +161,8 @@ function APModeForm({ config, onSaved }) {
 function ClientModeForm({ config, onSaved }) {
   const { onAuthError } = useAppContext();
   const [ssid, setSsid] = useState(config.client_ssid ?? '');
-  const [password, setPassword] = useState(config.client_password ?? '');
+  const [password, setPassword] = useState('');
+  const [openNetwork, setOpenNetwork] = useState(false);
   const [autoFallback, setAutoFallback] = useState(config.auto_fallback ?? false);
   const [fallbackTimeout, setFallbackTimeout] = useState(config.fallback_timeout ?? 60);
   const [networks, setNetworks] = useState(null);
@@ -188,7 +189,8 @@ function ClientModeForm({ config, onSaved }) {
     setSaving(true);
     setStatus(null);
     try {
-      await setClientMode(ssid, password || null, autoFallback, Number(fallbackTimeout));
+      const passwordToSend = openNetwork ? '' : (password || null);
+      await setClientMode(ssid, passwordToSend, autoFallback, Number(fallbackTimeout));
       setStatus('success');
       onSaved();
     } catch (err) {
@@ -234,11 +236,21 @@ function ClientModeForm({ config, onSaved }) {
             </div>
           )}
 
-          <label htmlFor="client-password">
-            Password
-            <input id="client-password" type="password" maxLength={63} value={password}
-                   onInput={e => setPassword(e.target.value)} disabled={saving} />
+          <label htmlFor="open-network" class="checkbox-label">
+            <input id="open-network" type="checkbox" role="switch"
+                   checked={openNetwork} onChange={e => setOpenNetwork(e.target.checked)}
+                   disabled={saving} />
+            Open network (no password)
           </label>
+
+          {!openNetwork && (
+            <label htmlFor="client-password">
+              Password
+              <input id="client-password" type="password" maxLength={63} value={password}
+                     onInput={e => setPassword(e.target.value)} disabled={saving}
+                     placeholder="Leave blank to keep existing" />
+            </label>
+          )}
 
           <label htmlFor="auto-fallback" class="checkbox-label">
             <input id="auto-fallback" type="checkbox" role="switch"

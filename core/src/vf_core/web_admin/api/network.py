@@ -24,7 +24,7 @@ class NetworkConfigResponse(BaseModel):
     """Response model for network configuration"""
     mode: str
     ap_ssid: str
-    ap_password: str
+    ap_password: Optional[str]
     ap_channel: int
     ap_ip: str
     client_ssid: Optional[str]
@@ -51,7 +51,7 @@ class APModeRequest(BaseModel):
 class ClientModeRequest(BaseModel):
     """Request model for client mode configuration"""
     ssid: str = Field(..., min_length=1, max_length=32)
-    password: str = Field(default="")
+    password: Optional[str] = Field(None, max_length=63)
     auto_fallback: Optional[bool] = True
     fallback_timeout: Optional[int] = Field(60, ge=30, le=300)
 
