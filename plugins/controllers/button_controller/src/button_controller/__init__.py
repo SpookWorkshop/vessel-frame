@@ -16,6 +16,7 @@ class ButtonController(Plugin):
         button_b_pin: int = 6,
         button_c_pin: int = 16,
         button_d_pin: int = 24,
+        debounce_ms: int = 200,
         **kwargs: Any,
     ):
         require_plugin_args(bus=bus)
@@ -26,6 +27,7 @@ class ButtonController(Plugin):
         self._button_b_pin = button_b_pin
         self._button_c_pin = button_c_pin
         self._button_d_pin = button_d_pin
+        self._bounce_time = debounce_ms / 1000
         self._button_a: Button | None = None
         self._button_b: Button | None = None
         self._button_c: Button | None = None
@@ -36,10 +38,10 @@ class ButtonController(Plugin):
         self._loop = asyncio.get_running_loop()
 
         try:
-            self._button_a = Button(self._button_a_pin, pull_up=True)
-            self._button_b = Button(self._button_b_pin, pull_up=True)
-            self._button_c = Button(self._button_c_pin, pull_up=True)
-            self._button_d = Button(self._button_d_pin, pull_up=True)
+            self._button_a = Button(self._button_a_pin, pull_up=True, bounce_time=self._bounce_time)
+            self._button_b = Button(self._button_b_pin, pull_up=True, bounce_time=self._bounce_time)
+            self._button_c = Button(self._button_c_pin, pull_up=True, bounce_time=self._bounce_time)
+            self._button_d = Button(self._button_d_pin, pull_up=True, bounce_time=self._bounce_time)
 
             self._button_a.when_pressed = self._on_button_a
             self._button_b.when_pressed = self._on_button_b
@@ -122,6 +124,13 @@ def get_config_schema() -> ConfigSchema:
                 field_type=ConfigFieldType.INTEGER,
                 default=24,
                 description="GPIO pin for button D"
+            ),
+            ConfigField(
+                key="debounce_ms",
+                label="Debounce Time (ms)",
+                field_type=ConfigFieldType.INTEGER,
+                default=200,
+                description="Minimum milliseconds between button presses to prevent double-firing"
             ),
         ]
     )
