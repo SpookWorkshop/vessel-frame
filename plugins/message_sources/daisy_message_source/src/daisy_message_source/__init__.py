@@ -17,6 +17,7 @@ class DaisyMessageSource(Plugin):
     BYTES_AVAIL_L_ADDR = 0xFE
     MESSAGE_BUFF_ADDR = 0xFF
     MAX_BLOCK_SIZE = 32
+    RECONNECT_DELAY: float = 5.0
     
     def __init__(
         self,
@@ -125,63 +126,73 @@ class DaisyMessageSource(Plugin):
     
     async def _loop(self) -> None:
         """Continuously read from I2C and publish complete messages."""
-        try:
-            loop = asyncio.get_running_loop()
-            
-            # Open I2C bus
-            self._i2c = await loop.run_in_executor(
-                self._executor,
-                lambda: SMBus(self._i2c_bus)
-            )
-            
-            self._logger.info(f"Connected to I2C bus {self._i2c_bus}, address 0x{self._i2c_addr:02X}")
-            
-            # Initialize message buffer register
-            await loop.run_in_executor(
-                self._executor,
-                lambda: self._i2c.write_byte(self._i2c_addr, self.MESSAGE_BUFF_ADDR)
-            )
-            
-            while self._running:
-                # Check how many bytes are available
-                available = await loop.run_in_executor(
+        loop = asyncio.get_running_loop()
+
+        while self._running:
+            try:
+                self._logger.info(f"Connecting to I2C bus {self._i2c_bus}, address 0x{self._i2c_addr:02X}")
+
+                self._i2c = await loop.run_in_executor(
                     self._executor,
-                    self._read_available_count
+                    lambda: SMBus(self._i2c_bus)
                 )
-                
-                if available == 0:
-                    # No data, wait a bit
-                    await asyncio.sleep(0.05)
-                    continue
-                
-                self._logger.debug(f"Bytes available: {available}")
-                
-                # Read the available bytes
-                data = await loop.run_in_executor(
+
+                self._logger.info(f"Connected to I2C bus {self._i2c_bus}, address 0x{self._i2c_addr:02X}")
+
+                # Initialise message buffer register
+                await loop.run_in_executor(
                     self._executor,
-                    lambda: self._read_block(available)
+                    lambda: self._i2c.write_byte(self._i2c_addr, self.MESSAGE_BUFF_ADDR)
                 )
-                
-                if not data:
-                    await asyncio.sleep(0.01)
-                    continue
-                
-                # Add to buffer
-                self._message_buffer += data
-                
-                # Process complete messages (ending with \r\n)
-                while b"\r\n" in self._message_buffer:
-                    complete, _, remainder = self._message_buffer.partition(b"\r\n")
-                    
-                    message = complete.decode("ascii", errors="ignore").strip()
-                    if message:
-                        self._logger.info(f"Message: {message}")
-                        await self._bus.publish(self._topic, message)
-                    
-                    self._message_buffer = remainder
-                
-        except Exception:
-            self._logger.exception("Daisy message source crashed")
+
+                while self._running:
+                    available = await loop.run_in_executor(
+                        self._executor,
+                        self._read_available_count
+                    )
+
+                    if available == 0:
+                        await asyncio.sleep(0.05)
+                        continue
+
+                    self._logger.debug(f"Bytes available: {available}")
+
+                    data = await loop.run_in_executor(
+                        self._executor,
+                        lambda: self._read_block(available)
+                    )
+
+                    if not data:
+                        await asyncio.sleep(0.01)
+                        continue
+
+                    self._message_buffer += data
+
+                    while b"\r\n" in self._message_buffer:
+                        complete, _, remainder = self._message_buffer.partition(b"\r\n")
+
+                        message = complete.decode("ascii", errors="ignore").strip()
+                        if message:
+                            self._logger.debug(f"Message: {message}")
+                            await self._bus.publish(self._topic, message)
+
+                        self._message_buffer = remainder
+
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._logger.exception(
+                    f"Daisy I2C error, reconnecting in {self.RECONNECT_DELAY}s"
+                )
+            finally:
+                if self._i2c is not None:
+                    with suppress(Exception):
+                        self._i2c.close()
+                    self._i2c = None
+                self._message_buffer = b""
+
+            if self._running:
+                await asyncio.sleep(self.RECONNECT_DELAY)
 
 
 def get_config_schema() -> ConfigSchema:
