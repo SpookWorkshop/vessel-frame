@@ -131,14 +131,27 @@ class MapScreen(ScreenPlugin):
         # Parse update interval
         interval = float(update_interval) if isinstance(update_interval, str) else update_interval
 
+        # Scale padding, fonts, icons & gaps to canvas size using the
+        # 480px short-edge display as the 1.0 baseline. Never scales below 1.0.
+        canvas_w, canvas_h = self._renderer.canvas.size
+        self._scale = max(1.0, min(canvas_w, canvas_h) / 480)
+
+        self._screen_padding = int(self.SCREEN_PADDING * self._scale)
+        self._container_padding_horz = int(self.CONTAINER_PADDING_HORZ * self._scale)
+        self._container_padding_vert = int(self.CONTAINER_PADDING_VERT * self._scale)
+        self._header_height = int(self.HEADER_HEIGHT * self._scale)
+        self._container_radius = max(1, int(8 * self._scale))
+        self._icon_title_gap = int(20 * self._scale)
+        self._title_subtitle_gap = int(4 * self._scale)
+
         self._fonts: dict[str, ImageFont.FreeTypeFont] = {
-            "small": self._asset_manager.get_font("default", "SemiBold", 14),
-            "medium": self._asset_manager.get_font("default", "SemiBold", 20),
-            "vessel": self._asset_manager.get_font("default", "SemiBold", 10),
+            "small": self._asset_manager.get_font("default", "SemiBold", max(10, int(14 * self._scale))),
+            "medium": self._asset_manager.get_font("default", "SemiBold", max(14, int(20 * self._scale))),
+            "vessel": self._asset_manager.get_font("default", "SemiBold", max(8, int(10 * self._scale))),
         }
 
         self._icons: dict[str, Image.Image] = {
-            "vessel": self._asset_manager.get_icon("vessel", 40, self._palette["icon"]),
+            "vessel": self._asset_manager.get_icon("vessel", max(16, int(40 * self._scale)), self._palette["icon"]),
         }
 
         self._render_strategy = PeriodicRenderStrategy(
@@ -318,8 +331,8 @@ class MapScreen(ScreenPlugin):
 
         # Header drawn last so it's on top of everything
         self._draw_header_container(draw, width)
-        text_x = self.SCREEN_PADDING + self.CONTAINER_PADDING_HORZ
-        text_y = self.CONTAINER_PADDING_VERT
+        text_x = self._screen_padding + self._container_padding_horz
+        text_y = self._container_padding_vert
         self._draw_header(draw, text_x, text_y)
 
         await self._renderer.flush()
@@ -328,10 +341,10 @@ class MapScreen(ScreenPlugin):
         """Draw the header bar container."""
         draw.rounded_rectangle(
             [
-                (self.SCREEN_PADDING, self.SCREEN_PADDING),
-                (width - self.SCREEN_PADDING, self.SCREEN_PADDING + self.HEADER_HEIGHT),
+                (self._screen_padding, self._screen_padding),
+                (width - self._screen_padding, self._screen_padding + self._header_height),
             ],
-            radius=8,
+            radius=self._container_radius,
             fill=self._palette["foreground"],
         )
 
@@ -347,10 +360,10 @@ class MapScreen(ScreenPlugin):
         
         icon = self._icons["vessel"]
         self._renderer.canvas.paste(icon, (x, y), icon)
-        x += icon.size[0] + 20
+        x += icon.size[0] + self._icon_title_gap
 
         draw.text((x, y), title_text, fill=self._palette["text"], font=title_font)
-        y += self._get_text_height(title_font, title_text) + 4
+        y += self._get_text_height(title_font, title_text) + self._title_subtitle_gap
         draw.text((x, y), subtitle_text, fill=self._palette["text"], font=subtitle_font)
 
     def _draw_vessel(
@@ -501,14 +514,14 @@ class MapScreen(ScreenPlugin):
         label_y = y - text_height / 2
 
         # Adjust if label would go off the right edge
-        if label_x + text_width > width - self.SCREEN_PADDING:
+        if label_x + text_width > width - self._screen_padding:
             label_x = x - self.DOT_RADIUS - 4 - text_width
 
         # Adjust if label would go off top or bottom
-        if label_y < self.SCREEN_PADDING + self.HEADER_HEIGHT:
-            label_y = self.SCREEN_PADDING + self.HEADER_HEIGHT
-        elif label_y + text_height > height - self.SCREEN_PADDING:
-            label_y = height - self.SCREEN_PADDING - text_height
+        if label_y < self._screen_padding + self._header_height:
+            label_y = self._screen_padding + self._header_height
+        elif label_y + text_height > height - self._screen_padding:
+            label_y = height - self._screen_padding - text_height
 
         # Draw text with halo for readability
         halo_colour = self._palette.get("foreground", "#FFFFFF")
