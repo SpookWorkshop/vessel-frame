@@ -57,6 +57,11 @@ class MapScreen(ScreenPlugin):
 
     DOWNLOAD_TIMEOUT: float = 30.0
 
+    # Mapbox Static Images API caps each edge at 1280px. Larger target
+    # canvases (e.g. the 13.3" 1200x1600 inky display) are requested proportionally
+    # and upscaled on load.
+    MAPBOX_MAX_EDGE: int = 1280
+
     def __init__(
         self,
         *,
@@ -221,6 +226,8 @@ class MapScreen(ScreenPlugin):
                 self._logger.error("No Mapbox Key set - unable to download image")
                 continue
 
+            req_w, req_h, retina = self._compute_request_params(width, height)
+
             self._logger.info(f"Downloading map image: {name}")
             try:
                 # Use bounds format for Mapbox API
@@ -230,7 +237,7 @@ class MapScreen(ScreenPlugin):
                 )
                 url = (
                     f"https://api.mapbox.com/styles/v1/{self._map_style}/static/"
-                    f"{bounds}/{width}x{height}?access_token={self._mapbox_key}"
+                    f"{bounds}/{req_w}x{req_h}{retina}?access_token={self._mapbox_key}"
                 )
                 self._logger.debug(f"Mapbox URL: {url}")
                 tmp_path = img_path.with_suffix(".tmp")
@@ -244,6 +251,25 @@ class MapScreen(ScreenPlugin):
                 self._logger.info(f"Downloaded map image: {img_path}")
             except Exception:
                 self._logger.exception(f"Failed to download map image: {name}")
+
+    def _compute_request_params(self, width: int, height: int) -> tuple[int, int, str]:
+        """Return (request_width, request_height, retina_suffix) for a Mapbox URL.
+
+        Mapbox caps each dimension parameter at 1280. When either target edge
+        exceeds that, we use the @2x retina modifier: the dimension params are
+        halved and Mapbox returns a 2x-density image, so the final pixel size
+        matches the canvas exactly without any client-side upscaling.
+        """
+        if max(width, height) > self.MAPBOX_MAX_EDGE:
+            req_w = (width + 1) // 2
+            req_h = (height + 1) // 2
+            if max(req_w, req_h) > self.MAPBOX_MAX_EDGE:
+                self._logger.warning(
+                    f"Canvas dimensions {width}x{height} exceed Mapbox @2x limit. "
+                    f"Image may be truncated or rejected."
+                )
+            return req_w, req_h, "@2x"
+        return width, height, ""
 
     def _is_valid_image(self, path: Path) -> bool:
         """Return True if the file exists and can be fully decoded.
