@@ -144,6 +144,15 @@ class MapScreen(ScreenPlugin):
         self._icon_title_gap = int(20 * self._scale)
         self._title_subtitle_gap = int(4 * self._scale)
 
+        self._dot_radius = max(2, int(self.DOT_RADIUS * self._scale))
+        self._ship_min_length_px = int(self.SHIP_MIN_LENGTH_PX * self._scale)
+        self._ship_max_length_px = int(self.SHIP_MAX_LENGTH_PX * self._scale)
+        self._ship_min_beam_px = int(self.SHIP_MIN_BEAM_PX * self._scale)
+        self._ship_max_beam_px = int(self.SHIP_MAX_BEAM_PX * self._scale)
+        self._vessel_outline_width = max(1, int(2 * self._scale))
+        self._label_halo_offset = max(1, int(self._scale))
+        self._label_marker_gap = max(1, int(4 * self._scale))
+
         self._fonts: dict[str, ImageFont.FreeTypeFont] = {
             "small": self._asset_manager.get_font("default", "SemiBold", max(10, int(14 * self._scale))),
             "medium": self._asset_manager.get_font("default", "SemiBold", max(14, int(20 * self._scale))),
@@ -424,14 +433,14 @@ class MapScreen(ScreenPlugin):
         """Draw a vessel as a dot."""
         draw.ellipse(
             [
-                x - self.DOT_RADIUS,
-                y - self.DOT_RADIUS,
-                x + self.DOT_RADIUS,
-                y + self.DOT_RADIUS,
+                x - self._dot_radius,
+                y - self._dot_radius,
+                x + self._dot_radius,
+                y + self._dot_radius,
             ],
             fill=self._vessel_fill,
             outline=self._vessel_outline,
-            width=2,
+            width=self._vessel_outline_width,
         )
 
     def _draw_vessel_shape(
@@ -450,8 +459,8 @@ class MapScreen(ScreenPlugin):
         beam_px = beam / metres_per_pixel
 
         # Clamp to reasonable pixel sizes
-        length_px = max(self.SHIP_MIN_LENGTH_PX, min(self.SHIP_MAX_LENGTH_PX, length_px))
-        beam_px = max(self.SHIP_MIN_BEAM_PX, min(self.SHIP_MAX_BEAM_PX, beam_px))
+        length_px = max(self._ship_min_length_px, min(self._ship_max_length_px, length_px))
+        beam_px = max(self._ship_min_beam_px, min(self._ship_max_beam_px, beam_px))
 
         # Centre ship at origin, bow pointing up (north = 0 degrees)
         # The bow point is at the top, stern is flat at the bottom
@@ -480,7 +489,7 @@ class MapScreen(ScreenPlugin):
             rotated_points,
             fill=self._vessel_fill,
             outline=self._vessel_outline,
-            width=2,
+            width=self._vessel_outline_width,
         )
 
     def _draw_vessel_label(
@@ -510,12 +519,12 @@ class MapScreen(ScreenPlugin):
         text_height = bbox[3] - bbox[1]
 
         # Position label to the right of the marker by default
-        label_x = x + self.DOT_RADIUS + 4
+        label_x = x + self._dot_radius + self._label_marker_gap
         label_y = y - text_height / 2
 
         # Adjust if label would go off the right edge
         if label_x + text_width > width - self._screen_padding:
-            label_x = x - self.DOT_RADIUS - 4 - text_width
+            label_x = x - self._dot_radius - self._label_marker_gap - text_width
 
         # Adjust if label would go off top or bottom
         if label_y < self._screen_padding + self._header_height:
@@ -525,8 +534,9 @@ class MapScreen(ScreenPlugin):
 
         # Draw text with halo for readability
         halo_colour = self._palette.get("foreground", "#FFFFFF")
-        for dx, dy in [(-1, -1),(-1, 1),(1, -1),(1, 1),(-1, 0),(1, 0),(0, -1),(0, 1),]:
-            draw.text((label_x + dx, label_y + dy), name, fill=halo_colour, font=font)
+        for o in range(1, self._label_halo_offset + 1):
+            for dx, dy in [(-o, -o), (-o, o), (o, -o), (o, o), (-o, 0), (o, 0), (0, -o), (0, o)]:
+                draw.text((label_x + dx, label_y + dy), name, fill=halo_colour, font=font)
 
         draw.text((label_x, label_y), name, fill=self._vessel_outline, font=font)
 
