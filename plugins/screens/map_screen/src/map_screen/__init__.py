@@ -149,12 +149,16 @@ class MapScreen(ScreenPlugin):
         """Return a short hash of the config parameters that affect the map image.
 
         Any change to bounds, style or canvas dimensions produces a different
-        key, causing a cache miss and triggering a fresh download.
+        key, causing a cache miss and triggering a fresh download. Dimensions
+        are normalised to [short, long] so flipping orientation reuses the
+        same cached entries for orientation switch.
         """
         canvas = self._renderer.canvas
+        short_edge = min(canvas.width, canvas.height)
+        long_edge = max(canvas.width, canvas.height)
         key_data = (
             f"{self._min_lat}:{self._max_lat}:{self._min_lon}:{self._max_lon}"
-            f":{self._map_style}:{canvas.width}:{canvas.height}"
+            f":{self._map_style}:{short_edge}x{long_edge}"
         )
         return hashlib.sha256(key_data.encode()).hexdigest()[:12]
 
@@ -167,15 +171,22 @@ class MapScreen(ScreenPlugin):
                 path.unlink(missing_ok=True)
 
     def _ensure_map_images(self) -> None:
-        """Download map images for both orientations if they don't exist."""
+        """Download map images for both orientations if they don't exist.
+
+        Both orientations are pre-fetched so the device can switch between
+        portrait and landscape while offline without needing new downloads.
+        """
         if not self._bounds_valid:
             return
 
         canvas = self._renderer.canvas
+        short_edge = min(canvas.width, canvas.height)
+        long_edge = max(canvas.width, canvas.height)
 
+        # Portrait is tall (short x long), landscape is wide (long x short).
         orientations = [
-            ("map_portrait", canvas.width, canvas.height),
-            ("map_landscape", canvas.height, canvas.width),
+            ("map_portrait", short_edge, long_edge),
+            ("map_landscape", long_edge, short_edge),
         ]
 
         for name, width, height in orientations:
