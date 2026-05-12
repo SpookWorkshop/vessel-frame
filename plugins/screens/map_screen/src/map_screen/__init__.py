@@ -57,6 +57,11 @@ class MapScreen(ScreenPlugin):
 
     DOWNLOAD_TIMEOUT: float = 30.0
 
+    # Mapbox Static Images API caps each edge at 1280px. Larger target
+    # canvases (e.g. the 13.3" 1200x1600 inky display) are requested proportionally
+    # and upscaled on load.
+    MAPBOX_MAX_EDGE: int = 1280
+
     def __init__(
         self,
         *,
@@ -131,14 +136,36 @@ class MapScreen(ScreenPlugin):
         # Parse update interval
         interval = float(update_interval) if isinstance(update_interval, str) else update_interval
 
+        # Scale padding, fonts, icons & gaps to canvas size using the
+        # 480px short-edge display as the 1.0 baseline. Never scales below 1.0.
+        canvas_w, canvas_h = self._renderer.canvas.size
+        self._scale = max(1.0, min(canvas_w, canvas_h) / 480)
+
+        self._screen_padding = int(self.SCREEN_PADDING * self._scale)
+        self._container_padding_horz = int(self.CONTAINER_PADDING_HORZ * self._scale)
+        self._container_padding_vert = int(self.CONTAINER_PADDING_VERT * self._scale)
+        self._header_height = int(self.HEADER_HEIGHT * self._scale)
+        self._container_radius = max(1, int(8 * self._scale))
+        self._icon_title_gap = int(20 * self._scale)
+        self._title_subtitle_gap = int(4 * self._scale)
+
+        self._dot_radius = max(2, int(self.DOT_RADIUS * self._scale))
+        self._ship_min_length_px = int(self.SHIP_MIN_LENGTH_PX * self._scale)
+        self._ship_max_length_px = int(self.SHIP_MAX_LENGTH_PX * self._scale)
+        self._ship_min_beam_px = int(self.SHIP_MIN_BEAM_PX * self._scale)
+        self._ship_max_beam_px = int(self.SHIP_MAX_BEAM_PX * self._scale)
+        self._vessel_outline_width = max(1, int(2 * self._scale))
+        self._label_halo_offset = max(1, int(self._scale))
+        self._label_marker_gap = max(1, int(4 * self._scale))
+
         self._fonts: dict[str, ImageFont.FreeTypeFont] = {
-            "small": self._asset_manager.get_font("default", "SemiBold", 14),
-            "medium": self._asset_manager.get_font("default", "SemiBold", 20),
-            "vessel": self._asset_manager.get_font("default", "SemiBold", 10),
+            "small": self._asset_manager.get_font("default", "SemiBold", max(10, int(14 * self._scale))),
+            "medium": self._asset_manager.get_font("default", "SemiBold", max(14, int(20 * self._scale))),
+            "vessel": self._asset_manager.get_font("default", "SemiBold", max(8, int(10 * self._scale))),
         }
 
         self._icons: dict[str, Image.Image] = {
-            "vessel": self._asset_manager.get_icon("vessel", 40, self._palette["icon"]),
+            "vessel": self._asset_manager.get_icon("vessel", max(16, int(40 * self._scale)), self._palette["icon"]),
         }
 
         self._render_strategy = PeriodicRenderStrategy(
@@ -149,12 +176,16 @@ class MapScreen(ScreenPlugin):
         """Return a short hash of the config parameters that affect the map image.
 
         Any change to bounds, style or canvas dimensions produces a different
-        key, causing a cache miss and triggering a fresh download.
+        key, causing a cache miss and triggering a fresh download. Dimensions
+        are normalised to [short, long] so flipping orientation reuses the
+        same cached entries for orientation switch.
         """
         canvas = self._renderer.canvas
+        short_edge = min(canvas.width, canvas.height)
+        long_edge = max(canvas.width, canvas.height)
         key_data = (
             f"{self._min_lat}:{self._max_lat}:{self._min_lon}:{self._max_lon}"
-            f":{self._map_style}:{canvas.width}:{canvas.height}"
+            f":{self._map_style}:{short_edge}x{long_edge}"
         )
         return hashlib.sha256(key_data.encode()).hexdigest()[:12]
 
@@ -167,15 +198,22 @@ class MapScreen(ScreenPlugin):
                 path.unlink(missing_ok=True)
 
     def _ensure_map_images(self) -> None:
-        """Download map images for both orientations if they don't exist."""
+        """Download map images for both orientations if they don't exist.
+
+        Both orientations are pre-fetched so the device can switch between
+        portrait and landscape while offline without needing new downloads.
+        """
         if not self._bounds_valid:
             return
 
         canvas = self._renderer.canvas
+        short_edge = min(canvas.width, canvas.height)
+        long_edge = max(canvas.width, canvas.height)
 
+        # Portrait is tall (short x long), landscape is wide (long x short).
         orientations = [
-            ("map_portrait", canvas.width, canvas.height),
-            ("map_landscape", canvas.height, canvas.width),
+            ("map_portrait", short_edge, long_edge),
+            ("map_landscape", long_edge, short_edge),
         ]
 
         for name, width, height in orientations:
@@ -188,6 +226,8 @@ class MapScreen(ScreenPlugin):
                 self._logger.error("No Mapbox Key set - unable to download image")
                 continue
 
+            req_w, req_h, retina = self._compute_request_params(width, height)
+
             self._logger.info(f"Downloading map image: {name}")
             try:
                 # Use bounds format for Mapbox API
@@ -197,7 +237,7 @@ class MapScreen(ScreenPlugin):
                 )
                 url = (
                     f"https://api.mapbox.com/styles/v1/{self._map_style}/static/"
-                    f"{bounds}/{width}x{height}?access_token={self._mapbox_key}"
+                    f"{bounds}/{req_w}x{req_h}{retina}?access_token={self._mapbox_key}"
                 )
                 self._logger.debug(f"Mapbox URL: {url}")
                 tmp_path = img_path.with_suffix(".tmp")
@@ -211,6 +251,25 @@ class MapScreen(ScreenPlugin):
                 self._logger.info(f"Downloaded map image: {img_path}")
             except Exception:
                 self._logger.exception(f"Failed to download map image: {name}")
+
+    def _compute_request_params(self, width: int, height: int) -> tuple[int, int, str]:
+        """Return (request_width, request_height, retina_suffix) for a Mapbox URL.
+
+        Mapbox caps each dimension parameter at 1280. When either target edge
+        exceeds that, we use the @2x retina modifier: the dimension params are
+        halved and Mapbox returns a 2x-density image, so the final pixel size
+        matches the canvas exactly without any client-side upscaling.
+        """
+        if max(width, height) > self.MAPBOX_MAX_EDGE:
+            req_w = (width + 1) // 2
+            req_h = (height + 1) // 2
+            if max(req_w, req_h) > self.MAPBOX_MAX_EDGE:
+                self._logger.warning(
+                    f"Canvas dimensions {width}x{height} exceed Mapbox @2x limit. "
+                    f"Image may be truncated or rejected."
+                )
+            return req_w, req_h, "@2x"
+        return width, height, ""
 
     def _is_valid_image(self, path: Path) -> bool:
         """Return True if the file exists and can be fully decoded.
@@ -307,8 +366,8 @@ class MapScreen(ScreenPlugin):
 
         # Header drawn last so it's on top of everything
         self._draw_header_container(draw, width)
-        text_x = self.SCREEN_PADDING + self.CONTAINER_PADDING_HORZ
-        text_y = self.CONTAINER_PADDING_VERT
+        text_x = self._screen_padding + self._container_padding_horz
+        text_y = self._container_padding_vert
         self._draw_header(draw, text_x, text_y)
 
         await self._renderer.flush()
@@ -317,10 +376,10 @@ class MapScreen(ScreenPlugin):
         """Draw the header bar container."""
         draw.rounded_rectangle(
             [
-                (self.SCREEN_PADDING, self.SCREEN_PADDING),
-                (width - self.SCREEN_PADDING, self.SCREEN_PADDING + self.HEADER_HEIGHT),
+                (self._screen_padding, self._screen_padding),
+                (width - self._screen_padding, self._screen_padding + self._header_height),
             ],
-            radius=8,
+            radius=self._container_radius,
             fill=self._palette["foreground"],
         )
 
@@ -336,10 +395,10 @@ class MapScreen(ScreenPlugin):
         
         icon = self._icons["vessel"]
         self._renderer.canvas.paste(icon, (x, y), icon)
-        x += icon.size[0] + 20
+        x += icon.size[0] + self._icon_title_gap
 
         draw.text((x, y), title_text, fill=self._palette["text"], font=title_font)
-        y += self._get_text_height(title_font, title_text) + 4
+        y += self._get_text_height(title_font, title_text) + self._title_subtitle_gap
         draw.text((x, y), subtitle_text, fill=self._palette["text"], font=subtitle_font)
 
     def _draw_vessel(
@@ -400,14 +459,14 @@ class MapScreen(ScreenPlugin):
         """Draw a vessel as a dot."""
         draw.ellipse(
             [
-                x - self.DOT_RADIUS,
-                y - self.DOT_RADIUS,
-                x + self.DOT_RADIUS,
-                y + self.DOT_RADIUS,
+                x - self._dot_radius,
+                y - self._dot_radius,
+                x + self._dot_radius,
+                y + self._dot_radius,
             ],
             fill=self._vessel_fill,
             outline=self._vessel_outline,
-            width=2,
+            width=self._vessel_outline_width,
         )
 
     def _draw_vessel_shape(
@@ -426,8 +485,8 @@ class MapScreen(ScreenPlugin):
         beam_px = beam / metres_per_pixel
 
         # Clamp to reasonable pixel sizes
-        length_px = max(self.SHIP_MIN_LENGTH_PX, min(self.SHIP_MAX_LENGTH_PX, length_px))
-        beam_px = max(self.SHIP_MIN_BEAM_PX, min(self.SHIP_MAX_BEAM_PX, beam_px))
+        length_px = max(self._ship_min_length_px, min(self._ship_max_length_px, length_px))
+        beam_px = max(self._ship_min_beam_px, min(self._ship_max_beam_px, beam_px))
 
         # Centre ship at origin, bow pointing up (north = 0 degrees)
         # The bow point is at the top, stern is flat at the bottom
@@ -456,7 +515,7 @@ class MapScreen(ScreenPlugin):
             rotated_points,
             fill=self._vessel_fill,
             outline=self._vessel_outline,
-            width=2,
+            width=self._vessel_outline_width,
         )
 
     def _draw_vessel_label(
@@ -486,23 +545,24 @@ class MapScreen(ScreenPlugin):
         text_height = bbox[3] - bbox[1]
 
         # Position label to the right of the marker by default
-        label_x = x + self.DOT_RADIUS + 4
+        label_x = x + self._dot_radius + self._label_marker_gap
         label_y = y - text_height / 2
 
         # Adjust if label would go off the right edge
-        if label_x + text_width > width - self.SCREEN_PADDING:
-            label_x = x - self.DOT_RADIUS - 4 - text_width
+        if label_x + text_width > width - self._screen_padding:
+            label_x = x - self._dot_radius - self._label_marker_gap - text_width
 
         # Adjust if label would go off top or bottom
-        if label_y < self.SCREEN_PADDING + self.HEADER_HEIGHT:
-            label_y = self.SCREEN_PADDING + self.HEADER_HEIGHT
-        elif label_y + text_height > height - self.SCREEN_PADDING:
-            label_y = height - self.SCREEN_PADDING - text_height
+        if label_y < self._screen_padding + self._header_height:
+            label_y = self._screen_padding + self._header_height
+        elif label_y + text_height > height - self._screen_padding:
+            label_y = height - self._screen_padding - text_height
 
         # Draw text with halo for readability
         halo_colour = self._palette.get("foreground", "#FFFFFF")
-        for dx, dy in [(-1, -1),(-1, 1),(1, -1),(1, 1),(-1, 0),(1, 0),(0, -1),(0, 1),]:
-            draw.text((label_x + dx, label_y + dy), name, fill=halo_colour, font=font)
+        for o in range(1, self._label_halo_offset + 1):
+            for dx, dy in [(-o, -o), (-o, o), (o, -o), (o, o), (-o, 0), (o, 0), (0, -o), (0, o)]:
+                draw.text((label_x + dx, label_y + dy), name, fill=halo_colour, font=font)
 
         draw.text((label_x, label_y), name, fill=self._vessel_outline, font=font)
 
