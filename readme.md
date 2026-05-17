@@ -111,10 +111,17 @@ pip install ./core
 pip install ./plugins/message_sources/daisy_message_source
 pip install ./plugins/message_processors/ais_decoder_processor
 pip install ./plugins/renderers/inky_renderer
-pip install ./plugins/screens/table_screen
-pip install ./plugins/screens/zone_screen
 pip install ./plugins/controllers/button_controller
 ```
+
+### Install screen plugins
+Screen plugins are distributed via a separate repository. Clone it into `plugins/screens/` then install the screens you want:
+```bash
+git clone https://github.com/SpookWorkshop/vessel-frame-marine-screens.git ./plugins/screens
+pip install ./plugins/screens/table_screen
+pip install ./plugins/screens/zone_screen
+```
+See [docs/plugin-list.md](docs/plugin-list.md) for the full list of available screens, including third-party ones.
 Create a place for the network config to be stored
 ```bash
 sudo mkdir -p /etc/vessel-frame
