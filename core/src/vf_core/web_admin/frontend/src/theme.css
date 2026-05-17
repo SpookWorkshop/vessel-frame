@@ -620,6 +620,17 @@ body {
   border: 1px solid #f5c6c3;
 }
 
+.alert-warning {
+  background-color: #fff8e1;
+  color: #8a6d00;
+  border: 1px solid #ffe082;
+}
+
+.alert-warning a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 [data-theme="dark"] .alert-success {
   background-color: rgba(46, 125, 50, 0.15);
   color: #81c784;
@@ -630,4 +641,10 @@ body {
   background-color: rgba(183, 28, 28, 0.15);
   color: #ef9a9a;
   border-color: rgba(183, 28, 28, 0.3);
+}
+
+[data-theme="dark"] .alert-warning {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.3);
 }
