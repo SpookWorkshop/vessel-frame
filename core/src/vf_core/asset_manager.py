@@ -1,6 +1,23 @@
 from pathlib import Path
 from PIL import Image, ImageFont
 
+@dataclass
+class VariableFont:
+    file: Path
+    def load(self, variant: str, size: int) -> ImageFont.FreeTypeFont:
+        f = ImageFont.truetype(self.file, size)
+        f.set_variation_by_name(variant)
+        return f
+
+@dataclass
+class StaticFont:
+    dir: Path
+    pattern: str = "{family}-{variant}.ttf"
+    family: str | None = None
+    def load(self, variant: str, size: int) -> ImageFont.FreeTypeFont:
+        fam = self.family or self.dir.name
+        return ImageFont.truetype(self.dir / self.pattern.format(family=fam, variant=variant), size)
+
 class AssetManager:
     ICON_MAP = {
         "vessel": "vessel.png",
@@ -11,13 +28,19 @@ class AssetManager:
         "speed": "gauge.png"
     }
 
-    def __init__(self, path: Path, default_font: str = "Inter", default_icons: str = "Tabler") -> None:
+    def __init__(self,
+        path: Path,
+        primary_font: StaticFont | VariableFont = VariableFont(file = "Literata/Literata-VariableFont_opsz,wght.ttf"),
+        secondary_font: StaticFont | VariableFont = StaticFont(dir = "IBM_Plex_Mono", family= "IBMPlexMono"),
+        default_icons: str = "Tabler"
+    ) -> None:
         self._root_dir = path
 
         self._icons_path = path / "icons"
         self._fonts_path = path / "fonts"
 
         self._default_font = default_font
+        self._fonts = {"primary": primary_font, "secondary": secondary_font}
         self._default_icons = default_icons
 
         self._icon_cache: dict[tuple[str,int], Image.Image] = {}
@@ -27,8 +50,7 @@ class AssetManager:
         font = self._font_cache.get((role, variation, size))
 
         if not font:
-            font_path = self._root_dir / "fonts" / self._default_font / f"{self._default_font}-VariableFont_opsz,wght.ttf"
-            font = self._load_font(font_path, variation, size)
+            font = self._fonts[role].load(variation, size)
             self._font_cache[(role, variation, size)] = font
 
         return font
