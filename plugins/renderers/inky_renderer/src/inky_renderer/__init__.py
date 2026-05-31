@@ -85,12 +85,12 @@ class InkyRenderer(RendererPlugin):
         """
 
         return {
-            "background": "#0000FF",
+            "background": "#FFFFFF",
             "foreground": "#FFFFFF",
-            "line": "#0000FF",
-            "text": "#0000FF",
-            "icon": "#0000FF",
-            "accent": "#000000",
+            "line": "#000000",
+            "text": "#000000",
+            "icon": "#000000",
+            "accent": "#FF0000",
         }
 
     @property
