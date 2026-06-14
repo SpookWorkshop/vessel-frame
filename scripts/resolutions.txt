@@ -1,0 +1,18 @@
+# Supported panels only, minimum 400x600 (short side >=400, long side >=600).
+# Panels below this are out of scope for now.
+# Full resolution catalog is in resolutions_cat.txt.
+# Format: WxH - device(s)
+400x600 - Inky Impression
+400x640 - Waveshare
+448x600 - Waveshare
+480x648 - Waveshare
+480x800 - Inky Impression, Waveshare
+528x880 - Waveshare
+640x960 - GoodDisplay
+680x920 - GoodDisplay
+680x960 - Waveshare
+480x1360 - GoodDisplay
+1200x1600 - Inky Impression
+1404x1872 - GoodDisplay
+1440x2560 - GoodDisplay
+2160x2280 - GoodDisplay

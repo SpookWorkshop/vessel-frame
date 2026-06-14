@@ -1,0 +1,45 @@
+Supported:
+180x340 - Zhongjingyuan
+184x360 - Waveshare
+184x384 - GoodDisplay
+200x200 - Waveshare
+240x280 - Waveshare
+240x320 - GoodDisplay
+240x360 - Waveshare
+240x416 - Zhongjingyuan
+300x400 - Inky wHAT, Waveshare
+368x512 - Waveshare
+400x600 - Inky Impression
+400x640 - Waveshare
+448x600 - Waveshare
+480x800 - Inky Impression, Waveshare
+528x880 - Waveshare
+680x920 - GoodDisplay
+1200x1600 - Inky Impression
+1404x1872 - GoodDisplay
+
+Need Work:
+88x184 - GoodDisplay
+104x212 - Waveshare
+122x250 - Inky pHAT, Waveshare
+128x296 - MagTag, Waveshare
+152x296 - Waveshare
+160x296 - Waveshare
+168x384 - GoodDisplay
+168x400 - Waveshare
+176x264 - Waveshare
+480x648 - Waveshare
+480x1360 - GoodDisplay
+640x960 - GoodDisplay
+680x960 - Waveshare
+1440x2560 - GoodDisplay
+2160x2280 - GoodDisplay
+
+Unsupported:
+64x132 - GoodDisplay
+80x128 - Waveshare
+152x152 - Waveshare
+168x168 - Waveshare
+176x192 - GoodDisplay
+272x792 - Waveshare
+384x640 - Waveshare
