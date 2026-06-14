@@ -104,6 +104,7 @@ pip install ./plugins/message_processors/ais_decoder_processor
 pip install ./plugins/renderers/inky_renderer
 pip install ./plugins/screens/table_screen
 pip install ./plugins/screens/zone_screen
+pip install ./plugins/screens/map_screen
 pip install ./plugins/controllers/button_controller
 ```
 Create a place for the network config to be stored

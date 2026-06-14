@@ -7,4 +7,3 @@ config.toml
 **/.secrets
 data
 **/build
-plugins/screens

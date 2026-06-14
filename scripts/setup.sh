@@ -186,11 +186,8 @@ fi
 # Ask about screen plugins
 echo ""
 echo -e "${YELLOW}Screen Plugins${NC}"
-echo "Screen plugins are distributed via a separate repository."
-echo "See https://github.com/SpookWorkshop/vessel-frame/blob/main/docs/plugin-list.md for the full list."
 echo ""
 
-SCREENS_REPO_URL="https://github.com/SpookWorkshop/vessel-frame-marine-screens.git"
 SCREENS_DIR="./plugins/screens"
 SCREENS_TO_INSTALL=()
 
@@ -215,34 +212,16 @@ fi
 SCREEN_COUNT=${#SCREENS_TO_INSTALL[@]}
 
 if [ $SCREEN_COUNT -gt 0 ]; then
-    if [ -d "$SCREENS_DIR/.git" ]; then
-        echo "Updating screens repository..."
-        git -C "$SCREENS_DIR" pull
-    else
-        # Remove the directory if it exists but is empty
-        if [ -d "$SCREENS_DIR" ] && [ -z "$(ls -A "$SCREENS_DIR" 2>/dev/null)" ]; then
-            rmdir "$SCREENS_DIR"
-        fi
-        if [ -e "$SCREENS_DIR" ]; then
-            echo -e "${RED}Error: $SCREENS_DIR already exists but is not a git repository${NC}"
-            echo "Please move or delete it, then re-run setup"
-            exit 1
-        fi
-        echo "Cloning screens repository..."
-        git clone "$SCREENS_REPO_URL" "$SCREENS_DIR"
-    fi
-
     for screen in "${SCREENS_TO_INSTALL[@]}"; do
         if [ -d "$SCREENS_DIR/$screen" ]; then
             pip install "$SCREENS_DIR/$screen"
             echo -e "${GREEN}$screen installed${NC}"
         else
-            echo -e "${RED}Warning: $screen not found in screens repository, skipping${NC}"
+            echo -e "${RED}Warning: $screen not found in $SCREENS_DIR, skipping${NC}"
         fi
     done
 else
     echo -e "${YELLOW}No screens selected. You'll need to install at least one screen for the vessel frame to be useful.${NC}"
-    echo "See https://github.com/SpookWorkshop/vessel-frame/blob/main/docs/plugin-list.md for a list of available plugins"
 fi
 
 # Ask about button controller

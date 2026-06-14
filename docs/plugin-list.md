@@ -22,9 +22,9 @@ Vessel Frame's functionality is provided almost entirely through plugins. This p
 ### Screens
 | Plugin Name | Created By | Link | Description |
 |-------------|------------|------|-------------|
-| zone_screen | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-marine-screens/tree/main/zone_screen) | Displays information about a single vessel as it enters a predefined geofence |
-| table_screen | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-marine-screens/tree/main/table_screen) | Displays a table showing the vessels that have been heard from over the past 5 minutes |
-| map_screen | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-marine-screens/tree/main/map_screen) | Displays a map of a predefined area with ships laid over the top |
+| zone_screen | Spook | Built In | Displays information about a single vessel as it enters a predefined geofence |
+| table_screen | Spook | Built In | Displays a table showing the vessels that have been heard from over the past 5 minutes |
+| map_screen | Spook | Built In | Displays a map of a predefined area with ships laid over the top |
 
 ### Renderers
 | Plugin Name | Created By | Link | Description |
