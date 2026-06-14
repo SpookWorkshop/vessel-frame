@@ -64,7 +64,7 @@ The plugin system means you're not limited to the tested configuration. If your 
 
 1. Check if an existing plugin supports it
 2. Look for community plugins in the [plugin list](plugin-list.md)
-3. Create your own plugin — see [Creating Plugins](create-plugin.md)
+3. Create your own plugin - see [Creating Plugins](create-plugin.md)
 
 ## Hardware Tips
 

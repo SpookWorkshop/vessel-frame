@@ -32,9 +32,9 @@ class ErrorScreen(ScreenPlugin):
         self._message = ""
         self._recovery = ""
         self._fonts = {
-            "title": asset_manager.get_font("default", "Bold", 24),
-            "body": asset_manager.get_font("default", "SemiBold", 16),
-            "hint": asset_manager.get_font("default", "SemiBold", 13),
+            "title": asset_manager.get_font("primary", "700", 24),
+            "body": asset_manager.get_font("primary", "400", 16),
+            "hint": asset_manager.get_font("primary", "400", 13),
         }
 
     def set_error(self, message: str, recovery: str = "") -> None:

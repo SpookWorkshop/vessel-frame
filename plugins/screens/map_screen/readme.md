@@ -33,7 +33,7 @@ Next, you'll need to set up a map style. This controls how your map looks, featu
 Finally, you need to define which area of the map to display. The easiest way to do this is using Mapbox's static map playground:
 
 1. Go to the [Mapbox Static Playground](https://docs.mapbox.com/playground/static/)
-2. In the left panel, set the width and height to match your screen's resolution (for example, 800×480 for the Inky 7-inch display)
+2. In the left panel, set the width and height to match your screen's resolution (for example, 800x480 for the Inky 7-inch display)
 3. Drag and zoom the preview until your desired area fits within the overlay
 4. In the left panel, switch the position selector to Bounding Box
 5. Copy the four values (min lat, min lon, max lat, max lon) into the corresponding fields in the admin panel

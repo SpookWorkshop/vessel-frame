@@ -53,8 +53,27 @@ export function PluginsPage() {
 
       {Object.entries(CATEGORY_LABELS).map(([cat, label]) => {
         const names = plugins[cat] ?? [];
-        if (names.length === 0) return null;
         const enabledList = enabledByCategory[cat] ?? [];
+
+        if (names.length === 0) {
+          if (cat === 'screens') {
+            return (
+              <section key={cat} class="plugin-section">
+                <h3>{label}</h3>
+                <div class="alert alert-warning">
+                  <strong>No screen plugins installed.</strong> Vessel Frame needs at least
+                  one screen plugin to show anything on the display. Browse the{' '}
+                  <a href="https://github.com/SpookWorkshop/vessel-frame/blob/main/docs/plugin-list.md"
+                     target="_blank">
+                    plugin list
+                  </a>{' '}
+                  to find a screen to install.
+                </div>
+              </section>
+            );
+          }
+          return null;
+        }
 
         return (
           <section key={cat} class="plugin-section">

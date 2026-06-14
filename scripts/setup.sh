@@ -186,33 +186,42 @@ fi
 # Ask about screen plugins
 echo ""
 echo -e "${YELLOW}Screen Plugins${NC}"
-echo "Available screen types:"
 echo ""
 
-SCREEN_COUNT=0
+SCREENS_DIR="./plugins/screens"
+SCREENS_TO_INSTALL=()
 
 read -p "Install Table Screen plugin? [Y/n] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    pip install ./plugins/screens/table_screen
-    echo -e "${GREEN}Table Screen installed${NC}"
-    SCREEN_COUNT=$((SCREEN_COUNT + 1))
+    SCREENS_TO_INSTALL+=("table_screen")
 fi
 
 read -p "Install Zone Screen plugin? [Y/n] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    pip install ./plugins/screens/zone_screen
-    echo -e "${GREEN}Zone Screen installed${NC}"
-    SCREEN_COUNT=$((SCREEN_COUNT + 1))
+    SCREENS_TO_INSTALL+=("zone_screen")
 fi
 
 read -p "Install Map Screen plugin? [Y/n] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    pip install ./plugins/screens/map_screen
-    echo -e "${GREEN}Map Screen installed${NC}"
-    SCREEN_COUNT=$((SCREEN_COUNT + 1))
+    SCREENS_TO_INSTALL+=("map_screen")
+fi
+
+SCREEN_COUNT=${#SCREENS_TO_INSTALL[@]}
+
+if [ $SCREEN_COUNT -gt 0 ]; then
+    for screen in "${SCREENS_TO_INSTALL[@]}"; do
+        if [ -d "$SCREENS_DIR/$screen" ]; then
+            pip install "$SCREENS_DIR/$screen"
+            echo -e "${GREEN}$screen installed${NC}"
+        else
+            echo -e "${RED}Warning: $screen not found in $SCREENS_DIR, skipping${NC}"
+        fi
+    done
+else
+    echo -e "${YELLOW}No screens selected. You'll need to install at least one screen for the vessel frame to be useful.${NC}"
 fi
 
 # Ask about button controller
