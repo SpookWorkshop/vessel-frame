@@ -72,7 +72,7 @@ class LandscapeStandard(LandscapeLayout):
         draw.line([(x0, strip_rule_y), (x1, strip_rule_y)], line, thin)
         v_len = vessel.get("stern", 0) + vessel.get("bow", 0)
         v_wid = vessel.get("port", 0) + vessel.get("starboard", 0)
-        items = [f"{v_len}m × {v_wid}m", f"{vessel.get('draught', 0):g}m draught",
+        items = [f"{v_len}m x {v_wid}m", f"{vessel.get('draught', 0):g}m draught",
                  f"MMSI {vessel.get('identifier', '')}",
                  f"IMO {vessel.get('imo') or '-'}",
                  f"Callsign {(vessel.get('callsign') or '-').strip()}"]

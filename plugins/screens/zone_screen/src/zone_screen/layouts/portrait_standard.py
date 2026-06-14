@@ -1,9 +1,10 @@
 """Portrait single-column layout for the 4" and 7" panels (compact + standard).
 
 The compact (short side < 480px) and standard tiers share one scaled drawing
-path; spacing/wrapping branch on ``self._profile == "compact"``. A responsive
-fit-guard shrinks the scale until the minimum layout fits the panel height, so a
-single codebase serves both densities.
+path. Spacing/wrapping branch on self._profile == "compact". A responsive
+fit-guard shrinks the scale until the minimum layout fits the panel height
+so we can draw both sizes from one class. "Portrait Standard" not the best name
+since in reality it's Portrait Standard+Compact but it's descriptive enough for now.
 """
 from __future__ import annotations
 
@@ -91,10 +92,10 @@ class PortraitStandard(ZoneLayout):
         flex_space = footer_top - flex_top - 4 * line_w
 
         if self._profile == "compact":
-            # Title takes its natural height; where the panel has room, allow the
+            # Title takes its natural height. When the panel has room, allows the
             # name to wrap onto a second line (reserving the extra height for it),
             # otherwise it shrinks to fit one line. The diagram and info band
-            # split the rest ~40/60 so the diagram stays prominent.
+            # split the rest 40/60 so the diagram stays as the focus.
             name = vessel.get("name", "")
             name_wrap = self._compact_can_wrap(name, right - x, flex_space, vessel)
             title_h = self._title_min_h()
@@ -147,7 +148,7 @@ class PortraitStandard(ZoneLayout):
         self._screen_padding = max(6, round(25 * s))
         # Compact layouts pack tighter and give the diagram more room.
         self._line_spacing = max(3, round((10 if compact else 15) * s))
-        # Small gap hugs a value to its label; big gap separates the groups.
+        # Small gap hugs a value to its label, big gap separates the groups.
         # On compact the small gap is deliberately tight so the three rows read
         # as distinct clusters rather than an evenly-spaced list.
         if compact:
@@ -290,7 +291,7 @@ class PortraitStandard(ZoneLayout):
         info_items = []
         if country:
             info_items.append(country)
-        info_items.append(f"{vessel_length}m × {vessel_width}m")
+        info_items.append(f"{vessel_length}m x {vessel_width}m")
         if vessel_draught:
             info_items.append(f"{vessel_draught}m draught")
 
@@ -433,8 +434,8 @@ class PortraitStandard(ZoneLayout):
     def _layout_compact_info(self, x, right, top_y, vessel, draw=None, gap_big=None) -> int:
         """Lay out (and optionally draw) the three info groups, returning the
         band height. Spacing is measured between glyph *ink*, not font line
-        boxes: a value's caps sit `gap_small` below its label's baseline, and
-        groups are separated by `gap_big`. This keeps the visual rhythm tight
+        boxes: a value's caps sit gap_small below its label's baseline, and
+        groups are separated by gap_big. This keeps the visual rhythm tight
         and independent of each font's internal leading.
         """
         lf = self._fonts
@@ -445,7 +446,7 @@ class PortraitStandard(ZoneLayout):
         header_f = lf["sec_header_semibold"]
 
         def put(xx, ink_top, text, font, halign="left", baseline_y=None):
-            """Draw so the glyph ink-top lands on `ink_top`; return (ink_bottom, baseline)."""
+            """Draw so the glyph ink-top lands on ink_top. Return (ink_bottom, baseline)."""
             ascender_top = ink_top - self._ink_top(font, text)
             if draw is not None:
                 self._draw_text(draw, xx, ascender_top, text, font, halign=halign, baseline_y=baseline_y)

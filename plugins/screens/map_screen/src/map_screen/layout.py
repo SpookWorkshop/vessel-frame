@@ -1,13 +1,13 @@
 """The map screen's single layout: broadsheet frame + map plate + markers.
 
-One design for every resolution and orientation — a masthead band on top, the
+One design for every resolution and orientation: a masthead band on top, the
 map as a bordered plate filling the middle, and a footer band (legend +
 attribution). Vessels are heading-oriented hull markers (dot when no heading),
 each haloed, with solid/hollow fill for under-way/moored. Names are decluttered.
 
 All colours come from the renderer palette (never hard-coded) so the screen
-degrades gracefully across reduced-colour and greyscale panels; meaning is
-carried by shape, fill-state and halo, never by colour alone.
+degrades gracefully across reduced-colour and greyscale panels. Meaning is
+expressed by shapes, fill-state and halo, never by just the colour.
 """
 from __future__ import annotations
 
@@ -113,8 +113,8 @@ class MapLayout(TextRenderingMixin):
         self._renderer.clear()
 
         # --- build the map plate as a sub-image: markers/labels drawn here are
-        #     hard-clipped to the plate by the paste, so nothing spills over the
-        #     border or off the edge. ---
+        #     hard-clipped to the plate by the paste, so nothing overlaps the
+        #     border or draws off the edge. ---
         if map_image is not None:
             plate_img = (map_image.resize((plate_w, plate_h))
                          if map_image.size != (plate_w, plate_h) else map_image.copy())
@@ -210,7 +210,7 @@ class MapLayout(TextRenderingMixin):
     # --- markers -----------------------------------------------------------
     def _draw_marker(self, draw: ImageDraw.ImageDraw, vessel: dict[str, Any],
                      pos: tuple[float, float], mpp: float) -> None:
-        """Hull (oriented by heading, min-clamped); dot when no heading is known."""
+        """Hull (oriented by heading, min-clamped). Dot when heading is unknown."""
         x, y = pos
         moving = self._is_moving(vessel)
         heading = self._heading(vessel)
@@ -261,7 +261,7 @@ class MapLayout(TextRenderingMixin):
     def _draw_hull(self, draw: ImageDraw.ImageDraw, x: float, y: float, length: int,
                    beam: int, heading: float, mpp: float, moving: bool) -> None:
         """Pointed hull, oriented by heading, sized to-scale but never below the
-        minimum; vessels with no dimensions draw at the minimum hull size."""
+        minimum. Vessels with no dimensions draw at the minimum hull size."""
         min_l, max_l = self.SHIP_MIN_LENGTH_PX * self._scale, self.SHIP_MAX_LENGTH_PX * self._scale
         min_b, max_b = self.SHIP_MIN_BEAM_PX * self._scale, self.SHIP_MAX_BEAM_PX * self._scale
         if length > 0 and beam > 0:

@@ -1,9 +1,9 @@
 """Map screen plugin for vessel-frame.
 
 Displays vessels over a Mapbox map image inside a broadsheet frame. The screen
-is an orchestrator: it owns lifecycle + vessel data, delegates map-image
+is an orchestrator that owns lifecycle + vessel data, delegates map-image
 acquisition to MapImageCache (tiles.py) and all drawing to MapLayout (layout.py).
-The design is the same for every resolution and orientation, so there is a single
+The design is the same for every resolution and orientation, so this is a single
 layout rather than a family.
 """
 from __future__ import annotations

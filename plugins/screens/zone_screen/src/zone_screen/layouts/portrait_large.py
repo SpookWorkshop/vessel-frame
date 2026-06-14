@@ -1,8 +1,7 @@
 """Large-format (1000px+ short side) two-column portrait layout.
 
 A broadsheet-style spread with the vessel diagram and headline on the left and a
-dense data table on the right. Self-sizing: all px sizes scale from REF_W, so it
-doesn't use the responsive fit-guard the smaller portrait layout needs.
+data table on the right.
 """
 from __future__ import annotations
 
@@ -83,7 +82,7 @@ class PortraitLarge(ZoneLayout):
         self._draw_text(draw, x0, y, f"A {vtype} passed at {now.strftime('%H:%M')}", f_sub)
         y += self._line_height(f_sub) + px(10)
 
-        # --- title (split long names; reserve two lines; centre a single line) ---
+        # --- title (split long names, reserve two lines. Centre if a single line) ---
         name = vessel.get("name", "")
         lines = split_two(name) if (len(name) >= 10 and " " in name) else [name]
         longest = max(lines, key=len)
@@ -106,7 +105,7 @@ class PortraitLarge(ZoneLayout):
         y += title_block + px(12)
 
         # --- info line ---
-        info = [p for p in (country, f"{v_len} m × {v_wid} m",
+        info = [p for p in (country, f"{v_len} m x {v_wid} m",
                             f"{v_draught:g} m draught" if v_draught else "") if p]
         self._draw_text(draw, x0, y, "   •   ".join(info), f_info)
         y += self._line_height(f_info) + px(20)
@@ -122,8 +121,8 @@ class PortraitLarge(ZoneLayout):
         lx0, lx1 = x0, x0 + left_w
         rx0, rx1 = lx1 + gap, x1
 
-        # --- bottom region: stats framed by a diagram-width rule above and a
-        #     full-width thin rule below ---
+        # --- bottom region: stats framed by a diagram-width divider above and a
+        #     full-width thin divider below ---
         bottom_rule_y = H - margin - px(34)
         stat_num_lh = self._line_height(f_bignum)
         stat_lbl_lh = self._line_height(f_blabel)
@@ -198,7 +197,7 @@ class PortraitLarge(ZoneLayout):
         data_sections = [("MOTION", motion), ("POSITION", position), ("IDENTITY", identity)]
 
         # Fill the column: compute a row height that spreads the rows to the
-        # bottom rule, so the right side doesn't trail off into whitespace.
+        # bottom dilinevider, so the right side doesn't trail off into whitespace.
         sec_header_h = self._line_height(f_sec) + px(8) + thick + px(18)
         heading_block_h = (sec_header_h + self._line_height(f_sec) + px(8)
                            + self._line_height(f_dir) + px(10) + self._line_height(f_ital) + px(22))

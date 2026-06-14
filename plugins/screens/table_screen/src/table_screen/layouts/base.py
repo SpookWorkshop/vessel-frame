@@ -1,9 +1,9 @@
 """Base class for table-screen layouts.
 
-Holds the render context, the per-panel scale machinery (every tier scales from a
-per-profile reference width — there's no iterative fit-guard) and the shared
-vessel-formatting / recency / masthead / legend / stat / outline helpers that
-keep the tiers consistent. Concrete layouts implement render(vessels, total).
+It holds the render context, the per-panel scaleing (every tier scales from a
+per-profile reference width) and the shared vessel-formatting / recency / masthead
+/ legend / stat / outline helpers that keep the tiers consistent.
+Concrete layouts implement render(vessels, total).
 """
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from PIL import ImageDraw, ImageFont
 from vf_core.marine_utils import nav_status_short
 from vf_core.text_utils import TextRenderingMixin
 
-# Design reference widths per profile (the panel's long edge), per orientation;
-# fonts/spacing scale from these so each launch resolution renders at scale 1.0.
+# Design reference widths per profile (the panel's long edge), per orientation.
+# Fonts/spacing scale from these so each resolution renders at scale 1
 REF_WIDTH = {"compact": 400, "standard": 480, "large": 1200}
 REF_WIDTH_LANDSCAPE = {"compact": 600, "standard": 800, "large": 1600}
 
@@ -31,7 +31,7 @@ RECENT_MAX = 300
 class TableLayout(TextRenderingMixin):
     """Render context, scale machinery + shared table helpers.
 
-    TextRenderingMixin requires ``self._palette`` and ``self._asset_manager``,
+    TextRenderingMixin requires self._palette and self._asset_manager,
     both set here, so subclasses use the drawing/font helpers directly.
     """
 

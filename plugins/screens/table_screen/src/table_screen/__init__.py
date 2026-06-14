@@ -13,22 +13,21 @@ from vf_core.render_strategies import PeriodicRenderStrategy
 from .layouts import select_layout
 
 # Layout profile is chosen by the panel's short side (min of width/height, px):
-# at/above LARGE_MIN the broadsheet "large" layout; below STANDARD_MIN the tight
-# single-column "compact" layout; else "standard" (compact + a speed column).
+# at/above PROFILE_LARGE_MIN the dense two-column "large" layout is used, below
+# PROFILE_COMPACT_MAX the tight single-column "compact" layout, else "standard".
 PROFILE_LARGE_MIN = 1000
 PROFILE_STANDARD_MIN = 480
 
-# Upper bound on vessels pulled per render; the layout shows as many as fit.
+# Upper bound on vessels pulled per render. The layout shows as many as fit.
 FETCH_LIMIT = 500
 
 
 class TableScreen(ScreenPlugin):
     """Screen showing a broadsheet table of recently observed vessels.
 
-    The screen is an orchestrator: on each render it pulls recent vessels, picks
-    the layout for the panel's (orientation, density) coordinate and delegates
-    drawing to it. Each layout scales from a per-profile reference width — see
-    the layouts package.
+    The screen class is an orchestrator that tracks the current vessel and on each
+    render, picks the layout for the panel's (orientation, density) coordinate
+    and delegates drawing to it.
     """
 
     def __init__(

@@ -14,8 +14,8 @@ from .base import ZoneLayout
 class LandscapeLayout(ZoneLayout):
     """Common landscape helpers (hull orientation/drawing + spec info line)."""
 
-    # Long hulls (tankers/cargo, >= ~5:1) read better drawn vertically. Chunkier
-    # working boats (fishing/tug/ferry) read better horizontally.
+    # Long hulls (tankers/cargo, >= 5:1) look better drawn vertically. Chunkier
+    # working boats (fishing/tug/ferry) look better horizontally.
     SHIP_VERTICAL_RATIO = 5.0
 
     def _ls_ship_orient(self, vessel):
@@ -30,7 +30,7 @@ class LandscapeLayout(ZoneLayout):
         v_len = vessel.get("stern", 0) + vessel.get("bow", 0)
         v_wid = vessel.get("port", 0) + vessel.get("starboard", 0)
         v_dr = vessel.get("draught", 0)
-        parts = [p for p in (country, f"{v_len}m × {v_wid}m",
+        parts = [p for p in (country, f"{v_len}m x {v_wid}m",
                              f"{v_dr:g}m draught" if v_dr else "") if p]
         return "   ·   ".join(parts)
 

@@ -13,8 +13,8 @@ from vf_core.render_strategies import PeriodicRenderStrategy
 from .layouts import select_layout
 
 # Layout profile is chosen by the panel's short side (min of width/height, px):
-# at/above PROFILE_LARGE_MIN the dense two-column "large" layout is used; below
-# PROFILE_COMPACT_MAX the tight single-column "compact" layout; else "standard".
+# at/above PROFILE_LARGE_MIN the dense two-column "large" layout is used, below
+# PROFILE_COMPACT_MAX the tight single-column "compact" layout, else "standard".
 PROFILE_LARGE_MIN = 1000
 PROFILE_COMPACT_MAX = 480
 
@@ -22,10 +22,9 @@ PROFILE_COMPACT_MAX = 480
 class ZoneScreen(ScreenPlugin):
     """Screen to display detailed information about a vessel in a zone.
 
-    The screen is an orchestrator: it tracks the current vessel and, on each
+    The screen class is an orchestrator that tracks the current vessel and on each
     render, picks the layout for the panel's (orientation, density) coordinate
-    and delegates drawing to it. Each layout is self-sizing — see the layouts
-    package.
+    and delegates drawing to it.
     """
 
     def __init__(

@@ -1,6 +1,6 @@
 """Landscape list layout for the 4" and 7" panels (compact + standard).
 
-A balanced two-column list; the standard tier adds a speed column per row.
+A balanced two-column list. The standard size adds a speed column.
 """
 from __future__ import annotations
 

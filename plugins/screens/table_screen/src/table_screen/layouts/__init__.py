@@ -1,8 +1,8 @@
-"""Table-screen layouts, one class per (orientation, density) coordinate.
+"""Table-screen layouts, one class per (orientation, density) combo.
 
-`select_layout` maps the orientation + density profile chosen by the orchestrator
-to a layout class. Compact and standard tiers share one list class per
-orientation; large has its own broadsheet class per orientation.
+select_layout maps the orientation & density profile chosen by the orchestrator
+to a layout class. Compact and standard share one list class per
+orientation, large has its own broadsheet class per orientation.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ __all__ = [
 
 
 def select_layout(orientation: str, profile: str) -> type[TableLayout]:
-    """Return the layout class for an (orientation, density) coordinate."""
+    """Return the layout class for an (orientation, density) combo."""
     if orientation == "landscape":
         return LandscapeLarge if profile == "large" else LandscapeStandard
     return PortraitLarge if profile == "large" else PortraitStandard

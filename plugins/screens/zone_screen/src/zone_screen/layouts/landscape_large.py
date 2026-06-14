@@ -1,4 +1,4 @@
-"""Landscape large layout for the 13" panel (1600x1200) — the "chart plate".
+"""Landscape large layout for the 13" panel (1600x1200).
 
 The hull is drawn at its true heading inside a compass rose, with four data
 sections (motion / voyage / dimensions / position) along the foot. Self-sizing

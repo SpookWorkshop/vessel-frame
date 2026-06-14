@@ -1,8 +1,8 @@
-"""Mapbox static-map plate images: download, cache and load.
+"""Mapbox static-map plate image utils.
 
-Keeps all the HTTP/filesystem concerns out of the screen. Plate images for both
-orientations are cached under data_dir/map_cache, keyed by bounds + style + plate
-size (normalised so flipping orientation reuses the same entries).
+Plate images for both orientations are cached under data_dir/map_cache,
+named by bounds + style + plate size (normalised, so flipping orientation
+reuses the same entries).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class MapImageCache:
     """Downloads/caches/loads the plate-sized map images for both orientations."""
 
     DOWNLOAD_TIMEOUT: float = 30.0
-    # Mapbox Static Images API caps each edge at 1280px; larger plates use @2x.
+    # Mapbox Static Images API caps each edge at 1280px so larger plates use @2x.
     MAPBOX_MAX_EDGE: int = 1280
 
     def __init__(
@@ -138,7 +138,7 @@ class MapImageCache:
         return width, height, ""
 
     def _is_valid_image(self, path: Path) -> bool:
-        """True if the file exists and can be fully decoded; deletes if corrupt."""
+        """True if the file exists and can be fully decoded. Deletes if it's corrupted."""
         if not path.exists():
             return False
         try:
@@ -146,7 +146,7 @@ class MapImageCache:
                 img.load()
             return True
         except Exception:
-            self._logger.warning(f"Cached map image is corrupt, deleting: {path.name}")
+            self._logger.warning(f"Cached map image is corrupted, deleting: {path.name}")
             path.unlink(missing_ok=True)
             return False
 

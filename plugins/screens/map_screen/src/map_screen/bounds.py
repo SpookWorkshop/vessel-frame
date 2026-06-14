@@ -1,6 +1,6 @@
-"""Geographic bounds for the map screen: parsing, point-in-box, projection.
+"""Geographic bounds for the map screen.
 
-A small value object so the map layout and tile cache share the same geo maths
+A small util class so the map layout and tile cache share the same geo maths
 without depending on each other.
 """
 from __future__ import annotations

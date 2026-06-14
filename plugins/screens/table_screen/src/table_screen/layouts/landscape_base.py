@@ -1,8 +1,7 @@
 """Shared base for the landscape table layouts.
 
-Landscape spends the extra width on multiple columns to win back the rows lost
-to the short height. Both landscape tiers split the vessel list across columns
-the same way, so the balancing logic lives here.
+Landscape shows a split acrolls multiple columns to compensate for the short height.
+Both landscape tiers split the vessel list across columns the same way.
 """
 from __future__ import annotations
 

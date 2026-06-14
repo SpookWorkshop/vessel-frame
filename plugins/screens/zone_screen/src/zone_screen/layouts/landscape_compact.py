@@ -86,7 +86,7 @@ class LandscapeCompact(LandscapeLayout):
             if unit:
                 self._draw_text(draw, cx + vw + px(3), footer_value_y, unit, f_funit, baseline_y=bl)
 
-        # flag, L×W, draught, sitting just above the footer rule
+        # flag, LxW, draught, sitting just above the footer rule
         info_y = footer_rule_y - px(12) - self._line_height(f_info)
         self._draw_text(draw, x0, info_y, self._ls_info_line(vessel), f_info)
 
