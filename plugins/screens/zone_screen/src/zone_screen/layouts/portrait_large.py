@@ -1,12 +1,11 @@
-"""Large-format (1000px+) two-column layout for the zone screen.
+"""Large-format (1000px+ short side) two-column portrait layout.
 
-This profile is visually distinct from the portrait layouts. It's a broadsheet-style
-spread with the vessel diagram and headline on the left and a dense data table on
-the right. It's different enough from the base view that it needs its own module.
-LargeLayout is mixed into ZoneScreen and relies on that for the renderer,
-asset manager, palette, zone centre, and the TextRenderingMixin drawing helpers.
+A broadsheet-style spread with the vessel diagram and headline on the left and a
+dense data table on the right. Self-sizing: all px sizes scale from REF_W, so it
+doesn't use the responsive fit-guard the smaller portrait layout needs.
 """
 from __future__ import annotations
+
 import datetime
 from PIL import ImageDraw
 
@@ -16,14 +15,16 @@ from vf_core.marine_utils import (
 )
 from vf_core.text_utils import split_two, FONT_FLOOR
 
+from .base import ZoneLayout
+
 # Reference width this layout was designed at. All px() sizes scale from it.
 REF_W = 1200
 
 
-class LargeLayout:
-    """Mixin providing the large two-column vessel layout."""
+class PortraitLarge(ZoneLayout):
+    """Two-column broadsheet layout for large portrait panels (13")."""
 
-    async def _render_large(self) -> None:
+    async def render(self) -> None:
         vessel = self._current_vessel
         canvas = self._renderer.canvas
         draw = ImageDraw.Draw(canvas)
