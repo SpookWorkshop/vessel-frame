@@ -1,18 +1,16 @@
-"""Large-format (1000px+) layout for the table screen.
+"""Large-format (1000px+ short side) portrait layout for the table screen.
 
 A front-page treatment: masthead, two-line hero count, an editorial stats bar,
-and a wide table with a to-scale vessel outline column. LargeTableLayout is
-mixed into TableScreen and relies on it for the renderer, palette, asset
-manager, scale (_px) and the TextRenderingMixin / TableCommon helpers.
+and a wide table with a to-scale vessel outline column.
 """
 from __future__ import annotations
+
 import time
 from PIL import ImageDraw
 
 from vf_core.marine_utils import mmsi_country, compass
 
-# Reference width this layout was designed at. All px() sizes scale from it.
-REF_W = 1200
+from .base import TableLayout
 
 # Column widths as fractions of the content width:
 # vessel, outline, type, status, speed, course, heard. TYPE is a touch wider
@@ -21,10 +19,10 @@ REF_W = 1200
 COL_FRACTIONS = [0.34, 0.17, 0.16, 0.12, 0.09, 0.07, 0.05]
 
 
-class LargeTableLayout:
-    """Mixin providing the large table layout."""
+class PortraitLarge(TableLayout):
+    """Broadsheet table layout for large portrait panels (13")."""
 
-    async def _render_large(self, vessels: list[dict], total: int) -> None:
+    async def render(self, vessels: list[dict], total: int) -> None:
         canvas = self._renderer.canvas
         draw = ImageDraw.Draw(canvas)
         W, H = canvas.size

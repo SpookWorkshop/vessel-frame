@@ -1,15 +1,24 @@
-"""Shared helpers for the table screen's three layout tiers.
+"""Base class for table-screen layouts.
 
-TableCommon is mixed into TableScreen and relies on it (and TextRenderingMixin)
-for the renderer, palette, asset manager and drawing helpers. Holds the vessel
-formatting, recency logic, masthead and footer-legend drawing that every tier
-shares, so small / medium / large stay consistent.
+Holds the render context, the per-panel scale machinery (every tier scales from a
+per-profile reference width — there's no iterative fit-guard) and the shared
+vessel-formatting / recency / masthead / legend / stat / outline helpers that
+keep the tiers consistent. Concrete layouts implement render(vessels, total).
 """
 from __future__ import annotations
+
 import datetime
+from typing import Any
+
 from PIL import ImageDraw, ImageFont
 
 from vf_core.marine_utils import nav_status_short
+from vf_core.text_utils import TextRenderingMixin
+
+# Design reference widths per profile (the panel's long edge), per orientation;
+# fonts/spacing scale from these so each launch resolution renders at scale 1.0.
+REF_WIDTH = {"compact": 400, "standard": 480, "large": 1200}
+REF_WIDTH_LANDSCAPE = {"compact": 600, "standard": 800, "large": 1600}
 
 ISSUE_NO = "No. 0183"
 
@@ -19,8 +28,40 @@ LIVE_MAX = 60
 RECENT_MAX = 300
 
 
-class TableCommon:
-    """Mixin: vessel formatting, recency glyph, masthead and footer legend."""
+class TableLayout(TextRenderingMixin):
+    """Render context, scale machinery + shared table helpers.
+
+    TextRenderingMixin requires ``self._palette`` and ``self._asset_manager``,
+    both set here, so subclasses use the drawing/font helpers directly.
+    """
+
+    def __init__(
+        self,
+        *,
+        renderer: Any,
+        asset_manager: Any,
+        profile: str,
+        orientation: str,
+    ) -> None:
+        self._renderer = renderer
+        self._asset_manager = asset_manager
+        self._palette = renderer.palette
+        self._profile = profile
+        self._orientation = orientation
+
+        canvas_w, _ = renderer.canvas.size
+        refs = REF_WIDTH_LANDSCAPE if orientation == "landscape" else REF_WIDTH
+        self._scale = canvas_w / refs[profile]
+        self._line_w = max(1, round(2 * self._scale))
+        self._gap = max(1, round(16 * self._scale))
+        self._gap_s = max(1, round(5 * self._scale))
+
+    async def render(self, vessels: list[dict], total: int) -> None:
+        """Draw the vessel table to the canvas."""
+        raise NotImplementedError
+
+    def _px(self, v: float) -> int:
+        return max(1, round(v * self._scale))
 
     # --- vessel formatting -------------------------------------------------
     def _vessel_name(self, vessel: dict) -> str:
@@ -99,7 +140,7 @@ class TableCommon:
         """Brand / issue no. / date masthead. Returns y at the bottom of the block.
 
         stacked_date: True draws time over date on two right-aligned lines (large
-        tier). False draws a single 'dd Mon HH:MM' line (small/medium).
+        tier). False draws a single 'dd Mon HH:MM' line (compact/standard).
         """
         now = datetime.datetime.now()
         self._draw_text(draw, x0, y, "VESSEL FRAME", brand_f)
