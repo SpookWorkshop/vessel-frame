@@ -10,7 +10,7 @@ import logging
 from .ais_utils import get_vessel_full_type_name
 
 
-class AISDecoderProcessor(Plugin):
+class AISDecoderProcessor:
     """
     Decode AIS messages from the bus and publish normalised vessel messages.
 
@@ -20,11 +20,6 @@ class AISDecoderProcessor(Plugin):
     """
 
     _DECODE_BATCH_SIZE: int = 10
-
-    # Fields consumed internally; never passed through as dynamic data
-    _WITHDRAWN_FIELDS: frozenset[str] = frozenset({
-        "mmsi", "msg_type", "repeat", "sentences", "spare", "spare2",
-    })
 
     def __init__(
         self,
@@ -199,38 +194,36 @@ class AISDecoderProcessor(Plugin):
         Bytes values are converted to UTF-8 strings before normalisation.
         Invalid or non-ship messages are silently discarded.
         """
+        messages_processed = 0
         try:
             while True:
-                messages_processed = 0
+                ais_message = self._message_queue.get_or_none()
 
-                while True:
-                    ais_message = self._message_queue.get_or_none()
+                if not ais_message:
+                    await asyncio.sleep(0.1)
+                    continue
 
-                    if not ais_message:
-                        await asyncio.sleep(0.1)
-                        continue
+                try:
+                    decoded_sentence: dict[str, Any] = ais_message.decode().asdict()
 
-                    try:
-                        decoded_sentence: dict[str, Any] = ais_message.decode().asdict()
+                    self._logger.debug(f"Decoded: Type {decoded_sentence.get('msg_type')}, MMSI {decoded_sentence.get('mmsi')}")
 
-                        self._logger.debug(f"Decoded: Type {decoded_sentence.get('msg_type')}, MMSI {decoded_sentence.get('mmsi')}")
+                    decoded_sentence = {
+                        key: val.decode("utf-8", errors="ignore") if isinstance(val, bytes) else val
+                        for key, val in decoded_sentence.items()
+                    }
 
-                        decoded_sentence = {
-                            key: val.decode("utf-8", errors="ignore") if isinstance(val, bytes) else val
-                            for key, val in decoded_sentence.items()
-                        }
+                    normalised = self._normalise(decoded_sentence)
+                    if normalised is not None:
+                        await self._bus.publish(self._out_topic, normalised)
+                except Exception:
+                    self._logger.exception("Failed decoding message")
 
-                        normalised = self._normalise(decoded_sentence)
-                        if normalised is not None:
-                            await self._bus.publish(self._out_topic, normalised)
-                    except Exception:
-                        self._logger.exception("Failed decoding message")
+                messages_processed += 1
 
-                    messages_processed += 1
-
-                    if messages_processed >= self._DECODE_BATCH_SIZE:
-                        await asyncio.sleep(0)
-                        messages_processed = 0
+                if messages_processed >= self._DECODE_BATCH_SIZE:
+                    await asyncio.sleep(0)
+                    messages_processed = 0
 
         except asyncio.CancelledError:
             self._logger.info("Decode loop cancelled")
