@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "mock-message-source"
 version = "0.0.0"
 requires-python = ">=3.10"
+dependencies = ["vessel-frame-core"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
