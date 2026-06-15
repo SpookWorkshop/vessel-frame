@@ -25,7 +25,7 @@ When selecting the Operating System, choose "Raspberry Pi OS (other)" then "Rasp
 
 When the imager asks if you want to set up configuration options, choose yes and set up both SSH and WiFi.
 
-### Set up the OS enviroment
+### Set up the OS environment
 SSH into the Pi so you can set it up.
 
 First install the required dependencies:
@@ -56,7 +56,7 @@ bash scripts/setup.sh
 # Set up manually
 If you need to customise the setup or have different hardware requirements that need 3rd party plugins, you should go through the manual setup process.
 
-### Set up the OS enviroment
+### Set up the OS environment
 SSH into the Pi so you can set it up.
 
 First install the rest of the required dependencies:
