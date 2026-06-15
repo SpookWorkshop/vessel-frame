@@ -1,8 +1,7 @@
-import secrets
-import logging
 import json
+import logging
+import secrets
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,29 +22,29 @@ def _get_auth_data_path() -> Path:
 def get_or_create_secret_key() -> str:
     """Get or generate JWT secret key."""
     auth_data = _load_auth_data()
-    
+
     if not auth_data.get("secret_key"):
         auth_data["secret_key"] = secrets.token_urlsafe(32)
         _save_auth_data(auth_data)
         logger.info("Generated new JWT secret key")
-    
+
     return auth_data["secret_key"]
 
-def get_admin_credentials() -> Optional[dict]:
+def get_admin_credentials() -> dict | None:
     """
     Get admin username and password hash.
-    
+
     Returns:
         dict with 'username' and 'password_hash', or None if not configured
     """
     auth_data = _load_auth_data()
-    
+
     if "username" in auth_data and "password_hash" in auth_data:
         return {
             "username": auth_data["username"],
             "password_hash": auth_data["password_hash"]
         }
-    
+
     return None
 
 def set_admin_credentials(username: str, password_hash: str) -> None:

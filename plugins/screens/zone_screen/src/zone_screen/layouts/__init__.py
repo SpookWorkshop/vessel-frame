@@ -7,12 +7,12 @@ Landscape's three densities have a class for each.
 from __future__ import annotations
 
 from .base import ZoneLayout
-from .portrait_standard import PortraitStandard
-from .portrait_large import PortraitLarge
 from .landscape_base import LandscapeLayout
 from .landscape_compact import LandscapeCompact
-from .landscape_standard import LandscapeStandard
 from .landscape_large import LandscapeLarge
+from .landscape_standard import LandscapeStandard
+from .portrait_large import PortraitLarge
+from .portrait_standard import PortraitStandard
 
 __all__ = [
     "ZoneLayout", "LandscapeLayout", "select_layout",

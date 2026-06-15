@@ -11,7 +11,6 @@ import datetime
 from typing import Any
 
 from PIL import ImageDraw, ImageFont
-
 from vf_core.marine_utils import nav_status_short
 from vf_core.text_utils import TextRenderingMixin
 

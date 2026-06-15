@@ -1,5 +1,6 @@
 """AIS data and formatting helpers."""
 from __future__ import annotations
+
 import math
 from typing import NamedTuple
 

@@ -17,7 +17,6 @@ import time
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
-
 from vf_core.text_utils import TextRenderingMixin
 
 from .bounds import Bounds

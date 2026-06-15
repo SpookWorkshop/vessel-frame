@@ -9,11 +9,10 @@ layout rather than a family.
 from __future__ import annotations
 
 import asyncio
+import logging
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
-
-import logging
 
 from vf_core.asset_manager import AssetManager
 from vf_core.message_bus import MessageBus

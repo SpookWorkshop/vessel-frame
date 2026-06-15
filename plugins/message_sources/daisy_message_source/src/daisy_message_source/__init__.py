@@ -1,13 +1,20 @@
 from __future__ import annotations
-import asyncio
-from smbus2 import SMBus
-from concurrent.futures import ThreadPoolExecutor
-import logging
 
-from typing import Any
+import asyncio
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import suppress
+from typing import Any
+
+from smbus2 import SMBus
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
+from vf_core.plugin_types import (
+    ConfigField,
+    ConfigFieldType,
+    ConfigSchema,
+    Plugin,
+    require_plugin_args,
+)
 
 
 class DaisyMessageSource:
@@ -18,7 +25,7 @@ class DaisyMessageSource:
     MESSAGE_BUFF_ADDR = 0xFF
     MAX_BLOCK_SIZE = 32
     RECONNECT_DELAY: float = 5.0
-    
+
     def __init__(
         self,
         *,
@@ -48,7 +55,7 @@ class DaisyMessageSource:
         """Parse I2C address from hex/decimal string or int."""
         if isinstance(addr, int):
             return addr
-        
+
         addr = addr.strip()
         if addr.startswith("0x") or addr.startswith("0X"):
             return int(addr, 16)  # Parse as hex
@@ -84,7 +91,7 @@ class DaisyMessageSource:
 
         if self._i2c is not None:
             self._i2c.close()
-        
+
         self._executor.shutdown(wait=True)
 
     def _read_byte(self, addr: int) -> int:
@@ -95,7 +102,7 @@ class DaisyMessageSource:
         except Exception:
             self._logger.exception(f"Error reading byte from register 0x{addr:02X}")
             return 0
-    
+
     def _read_available_count(self) -> int:
         """Get number of bytes available to read."""
         try:
@@ -105,7 +112,7 @@ class DaisyMessageSource:
         except Exception:
             self._logger.exception("Error reading available byte count")
             return 0
-    
+
     def _read_block(self, size: int) -> bytes:
         """Read a block of specified size from I2C device."""
         try:
@@ -123,7 +130,7 @@ class DaisyMessageSource:
         except Exception:
             self._logger.exception("Error reading block from I2C")
             return b''
-    
+
     async def _loop(self) -> None:
         """Continuously read from I2C and publish complete messages."""
         loop = asyncio.get_running_loop()
@@ -159,7 +166,7 @@ class DaisyMessageSource:
 
                     data = await loop.run_in_executor(
                         self._executor,
-                        lambda: self._read_block(available)
+                        lambda available=available: self._read_block(available)
                     )
 
                     if not data:

@@ -1,12 +1,12 @@
-import subprocess
+import asyncio
 import json
-import time
 import logging
+import subprocess
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
-from dataclasses import dataclass, asdict
-from datetime import datetime
-import asyncio
 
 
 @dataclass
@@ -59,7 +59,7 @@ class NetworkManager:
 
         try:
             if self.CONFIG_FILE.exists():
-                with open(self.CONFIG_FILE, "r") as f:
+                with open(self.CONFIG_FILE) as f:
                     data = json.load(f)
                     return NetworkConfig.from_dict(data)
         except Exception:

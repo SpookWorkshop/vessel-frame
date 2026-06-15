@@ -14,15 +14,15 @@ Usage:
     python scripts/render_zone.py after    # -> data/mockups/after/
 """
 from __future__ import annotations
+
 import asyncio
 import re
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
-
 import vf_core
 import zone_screen
+from PIL import Image, ImageDraw
 from vf_core.asset_manager import AssetManager
 
 RES_FILE = Path(__file__).resolve().parent / "resolutions.txt"
@@ -143,11 +143,14 @@ def main():
     n_ok = n_tight = n_err = 0
     for cw, ch, orient, profile, scale, fits, error, devices in rows:
         if error:
-            status = "ERROR"; n_err += 1
+            status = "ERROR"
+            n_err += 1
         elif not fits:
-            status = "OVERFLOW"; n_tight += 1
+            status = "OVERFLOW"
+            n_tight += 1
         else:
-            status = "ok"; n_ok += 1
+            status = "ok"
+            n_ok += 1
         note = error if error else devices
         print(f"{cw:>4}x{ch:<5}  {orient}  {profile:8}  {scale:>5}  {status:8}  {note}")
     print("-" * 92)

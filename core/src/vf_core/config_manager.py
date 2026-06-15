@@ -1,8 +1,9 @@
+import copy
 import tomllib
-import tomli_w
 from pathlib import Path
 from typing import Any
-import copy
+
+import tomli_w
 
 
 class ConfigManager:
@@ -67,7 +68,7 @@ class ConfigManager:
         Returns:
             Any: A deep copy of the config value, or the default if not found.
         """
-        
+
         keys = key.split(".")
         value = self._cfg
 

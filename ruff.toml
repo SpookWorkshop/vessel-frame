@@ -1,0 +1,34 @@
+# Ruff configuration for the monorepo.
+# Applies to core and all plugins.
+
+target-version = "py311"
+line-length = 100
+
+extend-exclude = [
+    "**/build",
+    "**/dist",
+    "**/*.egg-info",
+    "node_modules",
+    ".venv",
+]
+
+[lint]
+# pycodestyle (E/W), pyflakes (F), isort (I), pyupgrade (UP), flake8-bugbear (B).
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",   # line length not enforced (left to a formatter if adopted)
+    "UP042",  # keep "class X(str, Enum)" rather than StrEnum
+]
+
+[lint.flake8-bugbear]
+# FastAPI uses these as default argument values
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Body",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Cookie",
+]

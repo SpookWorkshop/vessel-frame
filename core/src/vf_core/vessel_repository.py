@@ -1,8 +1,9 @@
 import json
-import aiosqlite
 import logging
 from pathlib import Path
 from typing import Any
+
+import aiosqlite
 
 
 class VesselRepository:

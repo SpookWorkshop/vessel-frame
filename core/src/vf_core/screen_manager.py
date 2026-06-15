@@ -1,16 +1,16 @@
 import asyncio
 import logging
 from contextlib import suppress
-
 from pathlib import Path
 
 from vf_core.config_manager import ConfigManager
+
+from .asset_manager import AssetManager
 from .error_screen import ErrorScreen
 from .message_bus import MessageBus
 from .plugin_manager import PluginManager
 from .plugin_types import GROUP_SCREENS, RendererPlugin, ScreenPlugin
 from .vessel_manager import VesselManager
-from .asset_manager import AssetManager
 
 
 class ScreenManager:

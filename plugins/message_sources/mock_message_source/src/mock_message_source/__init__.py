@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import asyncio
 import random
-from typing import Any
 from contextlib import suppress
+from typing import Any
+
 from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import Plugin, require_plugin_args
 

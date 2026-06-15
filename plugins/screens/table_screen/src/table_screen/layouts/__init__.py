@@ -7,11 +7,11 @@ orientation, large has its own broadsheet class per orientation.
 from __future__ import annotations
 
 from .base import TableLayout
-from .portrait_standard import PortraitStandard
-from .portrait_large import PortraitLarge
 from .landscape_base import LandscapeTableLayout
-from .landscape_standard import LandscapeStandard
 from .landscape_large import LandscapeLarge
+from .landscape_standard import LandscapeStandard
+from .portrait_large import PortraitLarge
+from .portrait_standard import PortraitStandard
 
 __all__ = [
     "TableLayout", "LandscapeTableLayout", "select_layout",

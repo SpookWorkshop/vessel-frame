@@ -1,6 +1,7 @@
-from pathlib import Path
-from PIL import ImageFont
 from dataclasses import dataclass
+from pathlib import Path
+
+from PIL import ImageFont
 
 
 @dataclass

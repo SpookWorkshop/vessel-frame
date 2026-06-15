@@ -1,6 +1,7 @@
 import asyncio
 from collections import defaultdict
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 _SHUTDOWN = object()
 
@@ -61,7 +62,7 @@ class MessageBus:
         Yields:
             Any: Messages published to the specified topic in the order received.
         """
-        
+
         q: asyncio.Queue[Any] = asyncio.Queue(maxsize=1000)
         async with self._lock:
             self._subs[topic].append(q)

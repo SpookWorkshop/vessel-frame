@@ -7,8 +7,8 @@ the foot. Self-sizing from an 800px design width.
 from __future__ import annotations
 
 import datetime
-from PIL import ImageDraw
 
+from PIL import ImageDraw
 from vf_core.marine_utils import compass, fmt_lat, fmt_lon, nav_status_label
 from vf_core.text_utils import FONT_FLOOR
 

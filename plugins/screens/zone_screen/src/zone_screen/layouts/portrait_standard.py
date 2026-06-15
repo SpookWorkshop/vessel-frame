@@ -12,9 +12,8 @@ import datetime
 from typing import Any
 
 from PIL import ImageDraw, ImageFont
-
-from vf_core.marine_utils import mmsi_country, compass, nav_status_label, fmt_lat, fmt_lon
-from vf_core.text_utils import split_two, FONT_FLOOR
+from vf_core.marine_utils import compass, fmt_lat, fmt_lon, mmsi_country, nav_status_label
+from vf_core.text_utils import FONT_FLOOR, split_two
 
 from .base import ZoneLayout
 

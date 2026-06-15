@@ -1,15 +1,15 @@
 """Render the MapScreen plugin at all 6 resolutions for verification."""
 from __future__ import annotations
+
 import asyncio
+import shutil
 import sys
 import time
-import shutil
 from pathlib import Path
 
-from PIL import Image, ImageDraw
-
-import vf_core
 import map_screen
+import vf_core
+from PIL import Image, ImageDraw
 from vf_core.asset_manager import AssetManager
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

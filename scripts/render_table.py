@@ -1,14 +1,14 @@
 """Render the TableScreen plugin at the three main resolutions."""
 from __future__ import annotations
+
 import asyncio
 import sys
 import time
 from pathlib import Path
 
-from PIL import Image, ImageDraw
-
-import vf_core
 import table_screen
+import vf_core
+from PIL import Image, ImageDraw
 from vf_core.asset_manager import AssetManager
 
 OUT = Path(__file__).resolve().parents[1] / "data" / "mockups"
