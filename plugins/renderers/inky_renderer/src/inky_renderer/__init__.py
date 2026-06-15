@@ -1,16 +1,18 @@
 from __future__ import annotations
-from typing import Any
+
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
+from inky.auto import auto
+from PIL import Image, ImageDraw
 from vf_core.plugin_types import (
     ConfigField,
     ConfigFieldType,
     ConfigSchema,
     RendererPlugin,
 )
-from PIL import Image, ImageDraw
-from inky.auto import auto
 
 
 class InkyRenderer:
@@ -58,7 +60,7 @@ class InkyRenderer:
     async def flush(self) -> None:
         """Push the current canvas to the Inky display."""
         image = self._canvas
-        
+
         # Inky expects landscape so rotate if we're in portrait
         if self._orientation == "portrait":
             image = image.rotate(90, expand=True)
@@ -66,7 +68,7 @@ class InkyRenderer:
         # Run in thread as it's a blocking call
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(self._executor, self._flush_block, image)
-        
+
 
     def clear(self) -> None:
         """Clear the canvas by filling it with the background colour."""
@@ -104,7 +106,7 @@ def get_config_schema() -> ConfigSchema:
     Returns:
         ConfigSchema: Schema describing this plugin's configuration options.
     """
-    
+
     return ConfigSchema(
         plugin_name="inky_renderer",
         plugin_type="renderer",

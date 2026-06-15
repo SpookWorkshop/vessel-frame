@@ -1,7 +1,7 @@
-from fastapi import Depends, HTTPException, Request, status
-
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
 
@@ -57,8 +57,8 @@ async def verify_token(
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
-        )
+        ) from None
     except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
+        ) from None

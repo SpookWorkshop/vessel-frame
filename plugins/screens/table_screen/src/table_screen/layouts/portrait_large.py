@@ -6,9 +6,9 @@ and a wide table with a to-scale vessel outline column.
 from __future__ import annotations
 
 import time
-from PIL import ImageDraw
 
-from vf_core.marine_utils import mmsi_country, compass
+from PIL import ImageDraw
+from vf_core.marine_utils import compass, mmsi_country
 
 from .base import TableLayout
 
@@ -53,7 +53,7 @@ class PortraitLarge(TableLayout):
         margin = px(44)
         x0, x1 = margin, W - margin
         cw = x1 - x0
-        thick, thin = px(2), self._line_w
+        thick = px(2)
         cpad = px(8)
 
         # --- masthead ---

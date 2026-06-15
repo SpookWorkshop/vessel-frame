@@ -1,8 +1,9 @@
 import asyncio
-import time
-from typing import Callable, Awaitable, Any
-from contextlib import suppress
 import logging
+import time
+from collections.abc import Awaitable, Callable
+from contextlib import suppress
+from typing import Any
 
 
 class PeriodicRenderStrategy:

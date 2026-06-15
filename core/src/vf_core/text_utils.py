@@ -4,6 +4,7 @@ Any screen plugin can mix TextRenderingMixin in to get
 anchored text drawing and font metric helpers.
 """
 from __future__ import annotations
+
 from PIL import ImageDraw, ImageFont
 
 __all__ = ["FONT_FLOOR", "split_two", "TextRenderingMixin"]

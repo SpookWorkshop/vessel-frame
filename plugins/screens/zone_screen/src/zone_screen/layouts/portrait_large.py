@@ -6,13 +6,18 @@ data table on the right.
 from __future__ import annotations
 
 import datetime
-from PIL import ImageDraw
 
+from PIL import ImageDraw
 from vf_core.marine_utils import (
-    mmsi_country, compass, compass_full, nav_status_label,
-    fmt_lat, fmt_lon, range_bearing,
+    compass,
+    compass_full,
+    fmt_lat,
+    fmt_lon,
+    mmsi_country,
+    nav_status_label,
+    range_bearing,
 )
-from vf_core.text_utils import split_two, FONT_FLOOR
+from vf_core.text_utils import FONT_FLOOR, split_two
 
 from .base import ZoneLayout
 

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, status
-from pydantic import BaseModel
-from typing import Any
 import logging
+from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from vf_core.config_manager import ConfigManager
 from vf_core.plugin_manager import PluginManager
 from vf_core.plugin_types import GROUP_SCHEMAS, ConfigField, ConfigFieldType
@@ -107,7 +107,7 @@ async def update_config(
         cm.save()
         return {"success": True, "path": update.path, "value": value}
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
 
 def _require_dict_keys(value: Any, keys: tuple[str, ...], label: str) -> None:

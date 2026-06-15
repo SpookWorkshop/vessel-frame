@@ -19,7 +19,7 @@ class Bounds:
     max_lon: float
 
     @classmethod
-    def parse(cls, bounds: dict | None, logger) -> "Bounds":
+    def parse(cls, bounds: dict | None, logger) -> Bounds:
         """Build from a config dict, warning on (and ignoring) incomplete input."""
         keys = ("min_lat", "max_lat", "min_lon", "max_lon")
         if bounds and not all(k in bounds for k in keys):

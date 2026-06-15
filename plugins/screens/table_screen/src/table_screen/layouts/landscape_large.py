@@ -6,8 +6,8 @@ with a to-scale outline.
 from __future__ import annotations
 
 import time
-from PIL import ImageDraw
 
+from PIL import ImageDraw
 from vf_core.marine_utils import compass
 
 from .landscape_base import LandscapeTableLayout

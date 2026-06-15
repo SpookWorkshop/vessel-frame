@@ -1,12 +1,19 @@
 from __future__ import annotations
-import asyncio
-import serial_asyncio
-import logging
 
-from typing import Any
+import asyncio
+import logging
 from contextlib import suppress
+from typing import Any
+
+import serial_asyncio
 from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
+from vf_core.plugin_types import (
+    ConfigField,
+    ConfigFieldType,
+    ConfigSchema,
+    Plugin,
+    require_plugin_args,
+)
 
 
 class COMMessageSource:
@@ -87,7 +94,7 @@ class COMMessageSource:
 
             except asyncio.CancelledError:
                 raise
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._logger.warning(
                     f"Timed out connecting to {self._port}, "
                     f"retrying in {self.RECONNECT_DELAY}s"

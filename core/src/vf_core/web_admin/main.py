@@ -7,19 +7,20 @@ Run via:
     uvicorn web_admin.main:app --host 127.0.0.1 --port 8000
 """
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pathlib import Path
+
 import uvicorn
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 from vf_core.config_manager import ConfigManager
-from vf_core.plugin_manager import PluginManager
 from vf_core.network_manager import NetworkManager
+from vf_core.plugin_manager import PluginManager
 from vf_core.web_admin.api import auth, system
 from vf_core.web_admin.auth import get_or_create_secret_key
 
-from .api import config, plugins, network
-
+from .api import config, network, plugins
 
 app = FastAPI(title="Vessel Frame Admin Panel")
 

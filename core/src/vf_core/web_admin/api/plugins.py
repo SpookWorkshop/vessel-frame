@@ -1,18 +1,17 @@
-from enum import Enum
-from fastapi import APIRouter, HTTPException, Depends, status
-from pydantic import BaseModel
-
-from vf_core.plugin_manager import PluginManager
-from vf_core.config_manager import ConfigManager
 import logging
+from enum import Enum
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from vf_core.config_manager import ConfigManager
+from vf_core.plugin_manager import PluginManager
 from vf_core.plugin_types import (
+    GROUP_CONTROLLERS,
     GROUP_PROCESSORS,
     GROUP_RENDERER,
     GROUP_SCHEMAS,
     GROUP_SCREENS,
     GROUP_SOURCES,
-    GROUP_CONTROLLERS
 )
 from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manager, verify_token
 
@@ -54,7 +53,7 @@ async def get_plugin_schemas(pm: PluginManager = Depends(get_plugin_manager)):
             schema = schema_func()
 
             schemas[name] = schema.to_dict()
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error loading schema for {entry_point.name}")
 
     return schemas
@@ -177,7 +176,7 @@ async def disable_plugin(
     category = update.category.value
 
     plugin_list = cm.get(f"plugins.{category}")
-    
+
     if plugin_list is None:
         return {"success": True}
 

@@ -6,6 +6,7 @@ tier. Both tiers share this scaled drawing path.
 from __future__ import annotations
 
 import time
+
 from PIL import ImageDraw
 
 from .base import TableLayout

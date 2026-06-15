@@ -10,33 +10,33 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from contextlib import suppress
-from functools import partial
 import logging
 import os
 import signal
 import sys
+from contextlib import suppress
+from functools import partial
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from logging.handlers import RotatingFileHandler
+from .asset_manager import AssetManager
+from .config_manager import ConfigManager
+from .message_bus import MessageBus
+from .network_manager import NetworkManager
+from .plugin_manager import PluginManager
 from .plugin_types import (
+    GROUP_CONTROLLERS,
     GROUP_PROCESSORS,
     GROUP_RENDERER,
     GROUP_SOURCES,
-    GROUP_CONTROLLERS,
     Plugin,
     RendererPlugin,
 )
-from .message_bus import MessageBus
-from .plugin_manager import PluginManager
-from .config_manager import ConfigManager
+from .screen_manager import ScreenManager
 from .vessel_manager import VesselManager
 from .vessel_repository import VesselRepository
-from .screen_manager import ScreenManager
-from .network_manager import NetworkManager
-from .asset_manager import AssetManager
-from .web_admin.main import start_admin_server
 from .web_admin import auth
+from .web_admin.main import start_admin_server
 
 
 def _default_data_dir() -> Path:
@@ -78,7 +78,7 @@ def _log_admin_status(
     if task.cancelled():
         # Manual shutdown - nothing to report
         return
-    
+
     try:
         task.result()
         logger.warning("Admin server stopped unexpectedly but cleanly")

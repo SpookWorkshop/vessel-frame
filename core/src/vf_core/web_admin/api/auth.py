@@ -1,15 +1,16 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
+import jwt
 from argon2 import PasswordHasher, Type
 from argon2.exceptions import VerifyMismatchError
-from fastapi import APIRouter, HTTPException, Depends, status
-import jwt
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ..auth import (
-    get_or_create_secret_key,
     get_admin_credentials,
-    set_admin_credentials,
+    get_or_create_secret_key,
     is_admin_configured,
+    set_admin_credentials,
 )
 
 ph = PasswordHasher(type=Type.ID)
@@ -57,13 +58,13 @@ async def login(
     try:
         ph.verify(credentials["password_hash"], request.password)
     except VerifyMismatchError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials") from None
 
     # Generate JWT
     token = jwt.encode(
         {
             "username": request.username,
-            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+            "exp": datetime.now(UTC) + timedelta(days=7),
         },
         secret_key,
         algorithm="HS256",

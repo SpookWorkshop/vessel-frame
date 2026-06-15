@@ -1,14 +1,22 @@
 from __future__ import annotations
-import asyncio
-from typing import Any
-from contextlib import suppress
-import logging
 
-from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import ConfigField, ConfigFieldType, ConfigSchema, ScreenPlugin, RendererPlugin, require_plugin_args
-from vf_core.vessel_manager import VesselManager
+import asyncio
+import logging
+from contextlib import suppress
+from typing import Any
+
 from vf_core.asset_manager import AssetManager
+from vf_core.message_bus import MessageBus
+from vf_core.plugin_types import (
+    ConfigField,
+    ConfigFieldType,
+    ConfigSchema,
+    RendererPlugin,
+    ScreenPlugin,
+    require_plugin_args,
+)
 from vf_core.render_strategies import PeriodicRenderStrategy
+from vf_core.vessel_manager import VesselManager
 
 from .layouts import select_layout
 
@@ -94,7 +102,7 @@ class TableScreen:
     async def _update_loop(self) -> None:
         """Internal loop that receives update events and requests renders."""
         try:
-            async for msg in self._bus.subscribe(self._in_topic):
+            async for _ in self._bus.subscribe(self._in_topic):
                 self._render_strategy.request_render()
         except asyncio.CancelledError:
             raise

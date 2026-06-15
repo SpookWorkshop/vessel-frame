@@ -6,9 +6,9 @@ footer (MMSI / SPD / CRS). Self-sizing from a 600px design width.
 from __future__ import annotations
 
 import datetime
-from PIL import ImageDraw
 
-from vf_core.text_utils import split_two, FONT_FLOOR
+from PIL import ImageDraw
+from vf_core.text_utils import FONT_FLOOR, split_two
 
 from .landscape_base import LandscapeLayout
 

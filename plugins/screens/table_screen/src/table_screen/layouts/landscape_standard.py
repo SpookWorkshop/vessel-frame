@@ -5,6 +5,7 @@ A balanced two-column list. The standard size adds a speed column.
 from __future__ import annotations
 
 import time
+
 from PIL import ImageDraw
 
 from .landscape_base import LandscapeTableLayout

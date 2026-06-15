@@ -1,13 +1,15 @@
 from __future__ import annotations
+
+from pathlib import Path
 from typing import Any
+
+from PIL import Image, ImageDraw
 from vf_core.plugin_types import (
     ConfigField,
     ConfigFieldType,
     ConfigSchema,
     RendererPlugin,
 )
-from PIL import Image, ImageDraw
-from pathlib import Path
 
 
 class ImageRenderer:
@@ -80,7 +82,7 @@ def get_config_schema() -> ConfigSchema:
     Returns:
         ConfigSchema: Schema describing this plugin's configuration options.
     """
-    
+
     return ConfigSchema(
         plugin_name="image_renderer",
         plugin_type="renderer",

@@ -1,10 +1,11 @@
 import asyncio
-import time
 import logging
 import math
+import time
 from contextlib import suppress
-from .message_bus import MessageBus
 from typing import Any
+
+from .message_bus import MessageBus
 from .vessel_repository import VesselRepository
 
 

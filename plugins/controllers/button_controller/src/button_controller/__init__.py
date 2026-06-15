@@ -1,13 +1,21 @@
-from gpiozero import Button
 import asyncio
 import logging
 from typing import Any
-from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
+
+from gpiozero import Button
 from vf_core.message_bus import MessageBus
+from vf_core.plugin_types import (
+    ConfigField,
+    ConfigFieldType,
+    ConfigSchema,
+    Plugin,
+    require_plugin_args,
+)
+
 
 class ButtonController:
     """Handles physical button presses."""
-    
+
     def __init__(
         self,
         *,
@@ -69,24 +77,24 @@ class ButtonController:
         if self._loop is None:
             self._logger.error("Event loop not available, button press ignored")
             return
-        
+
         asyncio.run_coroutine_threadsafe(
             self._bus.publish("screen.command", {"action": action}),
             self._loop
         )
-    
+
     def _on_button_a(self):
         """Button A: Go to previous screen."""
         self._schedule_publish("previous")
-    
+
     def _on_button_b(self):
         """Button B: Go to next screen."""
         self._schedule_publish("next")
-    
+
     def _on_button_c(self):
         """Button C: No action yet."""
         self._logger.info("Button C pressed (no action configured)")
-    
+
     def _on_button_d(self):
         """Button D: No action yet."""
         self._logger.info("Button D pressed (no action configured)")

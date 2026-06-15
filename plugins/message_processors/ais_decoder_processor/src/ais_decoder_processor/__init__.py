@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 import asyncio
-from typing import Any
+import logging
 from contextlib import suppress
-from vf_core.message_bus import MessageBus
-from vf_core.plugin_types import Plugin, require_plugin_args
+from typing import Any
+
 from pyais.queue import NMEAQueue
 from pyais.stream import TagBlockQueue
-import logging
+from vf_core.message_bus import MessageBus
+from vf_core.plugin_types import Plugin, require_plugin_args
+
 from .ais_utils import get_vessel_full_type_name
 
 

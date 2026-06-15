@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import datetime
 import math
-from PIL import ImageDraw
 
-from vf_core.marine_utils import compass, fmt_lat, fmt_lon, range_bearing, nav_status_label
+from PIL import ImageDraw
+from vf_core.marine_utils import compass, fmt_lat, fmt_lon, nav_status_label, range_bearing
 from vf_core.text_utils import FONT_FLOOR
 
 from .landscape_base import LandscapeLayout

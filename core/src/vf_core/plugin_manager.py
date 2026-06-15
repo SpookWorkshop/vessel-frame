@@ -1,7 +1,7 @@
-from importlib.metadata import entry_points, EntryPoint
-from collections.abc import Iterable, Callable
-from typing import Any
 import logging
+from collections.abc import Callable, Iterable
+from importlib.metadata import EntryPoint, entry_points
+from typing import Any
 
 from .plugin_types import GROUP_SCHEMAS, ConfigFieldType
 
