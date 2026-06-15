@@ -40,3 +40,22 @@ jobs:
             ./plugins/renderers/image_renderer
       - name: Import smoke test
         run: python -c "import vf_core.main, mock_message_source, ais_decoder_processor, image_renderer"
+
+  test:
+    name: Tests (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install core (with dev deps) and plugins under test
+        run: |
+          pip install ./core[dev]
+          pip install ./plugins/message_processors/ais_decoder_processor
+      - name: Run tests
+        run: pytest
