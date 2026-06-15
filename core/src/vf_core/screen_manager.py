@@ -108,26 +108,53 @@ class ScreenManager:
 
     async def _command_loop(self) -> None:
         """Listen for screen navigation commands."""
-        async for message in self._bus.subscribe("screen.command"):
-            if self._in_error:
-                continue
+        try:
+            async for message in self._bus.subscribe("screen.command"):
+                try:
+                    if self._in_error:
+                        continue
 
-            action = message.get("action")
+                    action = message.get("action")
 
-            if action == "next":
-                await self._show_next_screen()
-            elif action == "previous":
-                await self._show_previous_screen()
+                    if action == "next":
+                        await self._show_next_screen()
+                    elif action == "previous":
+                        await self._show_previous_screen()
+                except Exception:
+                    self._logger.exception("Error handling screen command")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self._logger.exception("Command loop crashed")
+            raise
 
     async def _error_loop(self) -> None:
         """Listen for system error events and switch to the error screen."""
-        async for message in self._bus.subscribe(MessageBus.TOPIC_SYSTEM_ERROR):
-            await self._handle_error(message)
+        try:
+            async for message in self._bus.subscribe(MessageBus.TOPIC_SYSTEM_ERROR):
+                try:
+                    await self._handle_error(message)
+                except Exception:
+                    self._logger.exception("Error handling system error event")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self._logger.exception("Error loop crashed")
+            raise
 
     async def _cleared_loop(self) -> None:
         """Listen for error-cleared events and restore the previous screen."""
-        async for _ in self._bus.subscribe(MessageBus.TOPIC_SYSTEM_ERROR_CLEARED):
-            await self._handle_cleared()
+        try:
+            async for _ in self._bus.subscribe(MessageBus.TOPIC_SYSTEM_ERROR_CLEARED):
+                try:
+                    await self._handle_cleared()
+                except Exception:
+                    self._logger.exception("Error handling error-cleared event")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self._logger.exception("Cleared loop crashed")
+            raise
 
     async def _handle_error(self, message: dict) -> None:
         """Deactivate the current screen and show the error screen."""

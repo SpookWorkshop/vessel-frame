@@ -5,9 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vessel-frame-core"
 version = "0.0.0"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "toml>=0.10.2",
     "tomli-w>=1.2.0",
     "aiosqlite>=0.21.0",
     "fastapi>=0.121.1",

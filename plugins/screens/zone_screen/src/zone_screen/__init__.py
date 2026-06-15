@@ -19,7 +19,7 @@ PROFILE_LARGE_MIN = 1000
 PROFILE_COMPACT_MAX = 480
 
 
-class ZoneScreen(ScreenPlugin):
+class ZoneScreen:
     """Screen to display detailed information about a vessel in a zone.
 
     The screen class is an orchestrator that tracks the current vessel and on each

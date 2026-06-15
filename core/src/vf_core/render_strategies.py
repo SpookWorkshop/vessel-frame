@@ -39,7 +39,7 @@ class PeriodicRenderStrategy:
         """
         Start the background loop that processes render requests.
 
-        Safe to call multiple times; subsequent calls are no-ops while the loop
+        Safe to call multiple times, subsequent calls are no-ops while the loop
         task is already running.
         """
         if self._task and not self._task.done():
@@ -143,7 +143,7 @@ class QueuedRenderStrategy:
         """
         Start the background event-processing loop.
 
-        Safe to call multiple times; subsequent calls are no-ops while the loop
+        Safe to call multiple times, subsequent calls are no-ops while the loop
         task is already running.
         """
         if self._task and not self._task.done():

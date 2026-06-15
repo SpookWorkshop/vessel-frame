@@ -23,7 +23,7 @@ class MessageBus:
         """
         Publish a message to all subscribers of a given topic.
 
-        Ensures thread-safe access to subscriber queues. If a subscriber's queue
+        Ensures task-safe access to subscriber queues. If a subscriber's queue
         is full, the oldest message is dropped to make space so that subscribers
         always receive the most recent data.
 
@@ -88,7 +88,7 @@ class MessageBus:
         exit their receive loop cleanly without needing to be externally cancelled.
         Clears all subscriptions afterwards.
 
-        This method is thread-safe.
+        This method is safe to call concurrently from asyncio tasks.
         """
         async with self._lock:
             for queues in self._subs.values():

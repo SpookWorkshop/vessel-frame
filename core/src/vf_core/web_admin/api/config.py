@@ -37,7 +37,7 @@ async def get_full_config(cm: ConfigManager = Depends(get_config_manager)):
         cm (ConfigManager): Injected config manager dependency.
 
     Returns:
-        dict[str, Any]: Deep copy of the full confign.
+        dict[str, Any]: Deep copy of the full config.
     """
     return cm.get_all()
 

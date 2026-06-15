@@ -6,11 +6,11 @@ from vf_core.plugin_types import (
     ConfigSchema,
     RendererPlugin,
 )
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageDraw
 from pathlib import Path
 
 
-class ImageRenderer(RendererPlugin):
+class ImageRenderer:
     """Renderer plugin that draws an image canvas using Pillow."""
 
     MIN_RENDER_INTERVAL: int = 0
@@ -64,7 +64,6 @@ class ImageRenderer(RendererPlugin):
             "foreground": "#FFFFFF",
             "line": "#000000",
             "text": "#000000",
-            "icon": "#000000",
             "accent": "#FF0000",
         }
 

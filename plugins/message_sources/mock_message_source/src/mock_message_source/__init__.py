@@ -56,7 +56,7 @@ DEFAULT_MESSAGES = [
 ]
 
 
-class MockMessageSource(Plugin):
+class MockMessageSource:
     """
     Message Source that outputs valid AIS messages onto the event bus in a loop.
     Messages are emitted at randomised intervals between min_delay and max_delay.

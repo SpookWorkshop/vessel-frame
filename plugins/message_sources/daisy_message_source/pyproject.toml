@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "daisy-message-source"
 version = "0.0.0"
 requires-python = ">=3.10"
-dependencies = ["smbus2>=0.5.0"]
+dependencies = ["vessel-frame-core", "smbus2>=0.5.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

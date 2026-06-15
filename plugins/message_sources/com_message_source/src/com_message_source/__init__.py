@@ -9,7 +9,7 @@ from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 
 
-class COMMessageSource(Plugin):
+class COMMessageSource:
     """Source plugin that reads AIS messages from a serial COM port."""
 
     CONNECT_TIMEOUT: float = 10.0

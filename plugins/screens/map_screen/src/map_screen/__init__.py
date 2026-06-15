@@ -33,7 +33,7 @@ from .layout import MapLayout
 from .tiles import MapImageCache
 
 
-class MapScreen(ScreenPlugin):
+class MapScreen:
     """Screen to display a map of vessels which were recently observed."""
 
     def __init__(

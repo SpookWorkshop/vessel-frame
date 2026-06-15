@@ -10,6 +10,10 @@ from vf_core.web_admin.dependencies import get_config_manager, get_plugin_manage
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Keys writable under the [SYSTEM] config section. Unlike plugin config, SYSTEM
+# has no per-field schema, so we gate writes against an explicit allowlist.
+ALLOWED_SYSTEM_KEYS = {"mapbox_api_key"}
+
 
 class ConfigUpdate(BaseModel):
     key: str
@@ -66,8 +70,11 @@ async def update_config(
     if not update.key or not update.key.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="System config key cannot be empty")
 
-    if len(update.key) > 40:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="System config key too long")
+    if update.key not in ALLOWED_SYSTEM_KEYS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown system config key '{update.key}'. Allowed: {', '.join(sorted(ALLOWED_SYSTEM_KEYS))}",
+        )
 
     try:
         cm.set(f"SYSTEM.{update.key}", update.value)
