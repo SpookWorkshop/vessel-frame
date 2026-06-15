@@ -9,8 +9,7 @@ from vf_core.plugin_types import (
     ConfigSchema,
     RendererPlugin,
 )
-from PIL import Image, ImageFont, ImageDraw
-from pathlib import Path
+from PIL import Image, ImageDraw
 from inky.auto import auto
 
 
@@ -45,7 +44,7 @@ class InkyRenderer:
 
         self._canvas: Image.Image = Image.new("RGB", (self._width, self._height))
 
-    def _flush_block(self, image: Image.image) -> None:
+    def _flush_block(self, image: Image.Image) -> None:
         """Blocking flush operation."""
         try:
             self._display.set_image(image)
@@ -57,7 +56,7 @@ class InkyRenderer:
             raise
 
     async def flush(self) -> None:
-        """Save the current canvas to the configured output path."""
+        """Push the current canvas to the Inky display."""
         image = self._canvas
         
         # Inky expects landscape so rotate if we're in portrait
@@ -89,7 +88,6 @@ class InkyRenderer:
             "foreground": "#FFFFFF",
             "line": "#000000",
             "text": "#000000",
-            "icon": "#000000",
             "accent": "#FF0000",
         }
 

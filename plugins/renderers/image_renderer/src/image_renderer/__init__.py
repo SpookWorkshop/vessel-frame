@@ -6,7 +6,7 @@ from vf_core.plugin_types import (
     ConfigSchema,
     RendererPlugin,
 )
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageDraw
 from pathlib import Path
 
 
@@ -64,7 +64,6 @@ class ImageRenderer:
             "foreground": "#FFFFFF",
             "line": "#000000",
             "text": "#000000",
-            "icon": "#000000",
             "accent": "#FF0000",
         }
 
