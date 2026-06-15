@@ -1,11 +1,12 @@
 import json
 import aiosqlite
 import logging
+from pathlib import Path
 from typing import Any
 
 
 class VesselRepository:
-    def __init__(self, db_path: str) -> None:
+    def __init__(self, db_path: Path | str) -> None:
         self._logger = logging.getLogger(__name__)
         self._db_path = db_path
         self._db_conn = None
@@ -19,8 +20,7 @@ class VesselRepository:
     async def _initialise_schema(self) -> None:
         """Create the database schema if it does not already exist."""
         if not self._db_conn:
-            self._logger.error("Database not connected")
-            return
+            raise RuntimeError("VesselRepository not started, call start() first")
 
         await self._db_conn.execute("""
             CREATE TABLE IF NOT EXISTS vessels (
@@ -72,8 +72,7 @@ class VesselRepository:
             or None if an error occurred.
         """
         if not self._db_conn:
-            self._logger.error("Database not connected")
-            return None
+            raise RuntimeError("VesselRepository not started, call start() first")
 
         has_name = "name" in vessel_data
         has_extension = "extension" in vessel_data
@@ -130,8 +129,7 @@ class VesselRepository:
             not found.
         """
         if not self._db_conn:
-            self._logger.error("Database not connected")
-            return None
+            raise RuntimeError("VesselRepository not started, call start() first")
 
         try:
             cursor = await self._db_conn.execute(
@@ -154,8 +152,7 @@ class VesselRepository:
             or None if an error occurred.
         """
         if not self._db_conn:
-            self._logger.error("Database not connected")
-            return None
+            raise RuntimeError("VesselRepository not started, call start() first")
 
         try:
             cursor = await self._db_conn.execute("""

@@ -87,7 +87,7 @@ class VesselManager:
         Args:
             message: Normalised vessel dict containing at minimum 'identifier'
                 and 'source_type'. Optional 'name' and 'extension' carry static
-                data; all other keys are treated as dynamic positional data.
+                data, all other keys are treated as dynamic positional data.
         """
         identifier = message.get("identifier")
         if not identifier:
