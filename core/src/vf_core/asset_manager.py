@@ -7,7 +7,6 @@ class VariableFont:
     file: Path
     italic_file: Path
     def load(self, variant: str, size: int, italic: bool) -> ImageFont.FreeTypeFont:
-        print(f"VARIABLE font load {self.file} - {self.file}")
         f = ImageFont.truetype(self.italic_file if italic else self.file, size)
         try:
             f.set_variation_by_axes([size, int(variant)])
@@ -21,7 +20,6 @@ class StaticFont:
     pattern: str = "{family}-{variant}.ttf"
     family: str | None = None
     def load(self, variant: str, size: int, italic: bool) -> ImageFont.FreeTypeFont:
-        print("STATIC font load")
         fam = self.family or self.dir.name
         return ImageFont.truetype(self.dir / self.pattern.format(family=fam, variant=variant), size)
 
@@ -63,7 +61,6 @@ class AssetManager:
         self._font_cache: dict[tuple[str,str,int], ImageFont.FreeTypeFont] = {}
 
     def get_font(self, role: str, variation: str, size: int, italic: bool = False) -> ImageFont.FreeTypeFont:
-        print(f"GET FONT {role} - {variation} - {size}")
         font = self._font_cache.get((role, variation, size, italic))
 
         if not font:
