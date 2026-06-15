@@ -8,8 +8,8 @@ from .asset_manager import AssetManager
 from .plugin_types import RendererPlugin, ScreenPlugin
 
 
-class ErrorScreen(ScreenPlugin):
-    """Sccreen displayed when a system.error event is received on the bus.
+class ErrorScreen:
+    """Screen displayed when a system.error event is received on the bus.
 
     Owned by ScreenManager rather than a plugin, not loaded via entry points.
     Call set_error() with the message payload before calling activate().

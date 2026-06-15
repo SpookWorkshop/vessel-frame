@@ -1,3 +1,11 @@
+"""
+Vessel Frame
+
+Starts core services, loads plugins, and runs the web admin.
+Usage:
+    vf --config config.toml --db db.sqlite --log-level INFO
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -29,14 +37,6 @@ from .network_manager import NetworkManager
 from .asset_manager import AssetManager
 from .web_admin.main import start_admin_server
 from .web_admin import auth
-
-"""
-Vessel Frame
-
-Starts core services, loads plugins, and runs the web admin.
-Usage:
-    vf --config config.toml --db db.sqlite --log-level INFO
-"""
 
 
 def _default_data_dir() -> Path:

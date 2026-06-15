@@ -1,3 +1,12 @@
+"""Vessel Frame Admin server.
+
+Exposes REST endpoints for configuration and plugin management and serves the
+single-page admin UI.
+
+Run via:
+    uvicorn web_admin.main:app --host 127.0.0.1 --port 8000
+"""
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -10,15 +19,6 @@ from vf_core.web_admin.api import auth, system
 from vf_core.web_admin.auth import get_or_create_secret_key
 
 from .api import config, plugins, network
-
-"""Vessel Frame Admin server.
-
-Exposes REST endpoints for configuration and plugin management and serves the
-single-page admin UI.
-
-Run via:
-    uvicorn web_admin.main:app --host 127.0.0.1 --port 8000
-"""
 
 
 app = FastAPI(title="Vessel Frame Admin Panel")
