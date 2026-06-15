@@ -3,7 +3,7 @@ import json
 import time
 import logging
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import Any
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import asyncio
@@ -18,8 +18,8 @@ class NetworkConfig:
     ap_password: str = "spook_workshop"
     ap_channel: int = 6
     ap_ip: str = "10.0.0.1"
-    client_ssid: Optional[str] = None
-    client_password: Optional[str] = None
+    client_ssid: str | None = None
+    client_password: str | None = None
     auto_fallback: bool = True
     fallback_timeout: int = 60
 
@@ -41,14 +41,14 @@ class NetworkManager:
     DHCPCD_CONF = "/etc/dhcpcd.conf"
     WPA_SUPPLICANT_CONF = "/etc/wpa_supplicant/wpa_supplicant.conf"
 
-    def __init__(self, config_file: Optional[Path] = None):
+    def __init__(self, config_file: Path | None = None):
         self._logger = logging.getLogger(__name__)
 
         if config_file:
             self.CONFIG_FILE = config_file
 
-        self.config = self._load_config()
         self._ensure_config_dir()
+        self.config = self._load_config()
 
     def _ensure_config_dir(self):
         """Ensure configuration directory exists"""
@@ -62,8 +62,8 @@ class NetworkManager:
                 with open(self.CONFIG_FILE, "r") as f:
                     data = json.load(f)
                     return NetworkConfig.from_dict(data)
-        except Exception as e:
-            self._logger.error(f"Error loading network config: {e}")
+        except Exception:
+            self._logger.exception("Error loading network config")
 
         return NetworkConfig()
 
@@ -75,8 +75,8 @@ class NetworkManager:
             with open(self.CONFIG_FILE, "w") as f:
                 json.dump(self.config.to_dict(), f, indent=2)
             self._logger.info("Network configuration saved")
-        except Exception as e:
-            self._logger.error(f"Error saving config: {e}")
+        except Exception:
+            self._logger.exception("Error saving config")
             raise
 
     def get_current_mode(self) -> str:
@@ -104,11 +104,11 @@ class NetworkManager:
                 return "client"
 
             return "offline"
-        except Exception as e:
-            self._logger.error(f"Error detecting network mode: {e}")
+        except Exception:
+            self._logger.exception("Error detecting network mode")
             return "offline"
 
-    async def scan_networks_async(self) -> List[Dict[str, any]]:
+    async def scan_networks_async(self) -> list[dict[str, Any]]:
         """Scan for available networks asynchronously
 
         Returns:
@@ -117,7 +117,7 @@ class NetworkManager:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self.scan_networks)
 
-    def scan_networks(self) -> List[Dict[str, any]]:
+    def scan_networks(self) -> list[dict[str, Any]]:
         """Scan for available networks
 
         Returns:
@@ -190,13 +190,13 @@ class NetworkManager:
             return unique_networks
 
         except subprocess.TimeoutExpired:
-            self._logger.error("Network scan timed out")
+            self._logger.exception("Network scan timed out")
             return []
-        except Exception as e:
-            self._logger.error(f"Error scanning networks: {e}")
+        except Exception:
+            self._logger.exception("Error scanning networks")
             return []
 
-    def schedule_mode_change(self, new_mode: str, **kwargs) -> Tuple[bool, str]:
+    def schedule_mode_change(self, new_mode: str, **kwargs) -> tuple[bool, str]:
         """Schedule a mode change for next boot
 
         This updates the config file but doesn't immediately apply changes.
@@ -226,10 +226,10 @@ class NetworkManager:
             )
 
         except Exception as e:
-            self._logger.error(f"Error scheduling mode change: {e}")
+            self._logger.exception("Error scheduling mode change")
             return False, str(e)
 
-    def get_status(self) -> Dict[str, any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current network status
 
         Returns:
@@ -280,10 +280,10 @@ class NetworkManager:
 
     def update_ap_config(
         self,
-        ssid: Optional[str] = None,
-        password: Optional[str] = None,
-        channel: Optional[int] = None,
-    ) -> Tuple[bool, str]:
+        ssid: str | None = None,
+        password: str | None = None,
+        channel: int | None = None,
+    ) -> tuple[bool, str]:
         """Update AP mode configuration
 
         Args:
@@ -314,16 +314,16 @@ class NetworkManager:
             return True, "AP configuration updated"
 
         except Exception as e:
-            self._logger.error(f"Error updating AP config: {e}")
+            self._logger.exception("Error updating AP config")
             return False, str(e)
 
     def update_client_config(
         self,
         ssid: str,
-        password: Optional[str] = None,
-        auto_fallback: Optional[bool] = None,
-        fallback_timeout: Optional[int] = None,
-    ) -> Tuple[bool, str]:
+        password: str | None = None,
+        auto_fallback: bool | None = None,
+        fallback_timeout: int | None = None,
+    ) -> tuple[bool, str]:
         """Update client mode configuration
 
         Args:
@@ -355,5 +355,5 @@ class NetworkManager:
             return True, "Client configuration updated"
 
         except Exception as e:
-            self._logger.error(f"Error updating client config: {e}")
+            self._logger.exception("Error updating client config")
             return False, str(e)
