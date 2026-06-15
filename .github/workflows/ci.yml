@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ruff
+        run: pip install ruff==0.15.17
+      - name: Lint
+        run: ruff check .
+
+  build:
+    name: Build & import (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install core and pure-Python plugins
+        run: |
+          pip install ./core
+          pip install \
+            ./plugins/message_sources/mock_message_source \
+            ./plugins/message_processors/ais_decoder_processor \
+            ./plugins/renderers/image_renderer
+      - name: Import smoke test
+        run: python -c "import vf_core.main, mock_message_source, ais_decoder_processor, image_renderer"
