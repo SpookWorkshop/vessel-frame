@@ -67,7 +67,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def _log_admin_status(
-    task: asyncio.Task, stop_event: asyncio.Event, logger: logging.Logger
+    task: asyncio.Task, logger: logging.Logger
 ) -> None:
     """
     Log the outcome if the admin server exits unexpectedly.
@@ -213,7 +213,7 @@ async def run(argv: list[str] | None = None) -> int:
     try:
         admin_task = asyncio.create_task(start_admin_server(config_manager, plugin_manager, network_manager, host="0.0.0.0"))
         admin_task.add_done_callback(
-            partial(_log_admin_status, stop_event=stop_event, logger=logger)
+            partial(_log_admin_status, logger=logger)
         )
 
         await vessel_repo.start()
