@@ -10,7 +10,7 @@ from vf_core.message_bus import MessageBus
 from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 
 
-class DaisyMessageSource(Plugin):
+class DaisyMessageSource:
     """Source plugin that reads messages from a Daisy AIS device."""
 
     BYTES_AVAIL_H_ADDR = 0xFD

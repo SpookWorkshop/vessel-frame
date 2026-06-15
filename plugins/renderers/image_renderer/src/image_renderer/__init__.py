@@ -10,7 +10,7 @@ from PIL import Image, ImageFont, ImageDraw
 from pathlib import Path
 
 
-class ImageRenderer(RendererPlugin):
+class ImageRenderer:
     """Renderer plugin that draws an image canvas using Pillow."""
 
     MIN_RENDER_INTERVAL: int = 0

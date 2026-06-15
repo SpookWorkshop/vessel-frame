@@ -5,7 +5,7 @@ from typing import Any
 from vf_core.plugin_types import Plugin, ConfigSchema, ConfigField, ConfigFieldType, require_plugin_args
 from vf_core.message_bus import MessageBus
 
-class ButtonController(Plugin):
+class ButtonController:
     """Handles physical button presses."""
     
     def __init__(
@@ -135,5 +135,5 @@ def get_config_schema() -> ConfigSchema:
         ]
     )
 
-def make_plugin(**kwargs):
+def make_plugin(**kwargs: Any) -> Plugin:
     return ButtonController(**kwargs)

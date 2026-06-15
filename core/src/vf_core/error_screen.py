@@ -5,7 +5,7 @@ import logging
 from PIL import ImageDraw, ImageFont
 
 from .asset_manager import AssetManager
-from .plugin_types import RendererPlugin, ScreenPlugin
+from .plugin_types import RendererPlugin
 
 
 class ErrorScreen:

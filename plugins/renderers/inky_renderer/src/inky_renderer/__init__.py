@@ -14,7 +14,7 @@ from pathlib import Path
 from inky.auto import auto
 
 
-class InkyRenderer(RendererPlugin):
+class InkyRenderer:
     """Renderer plugin that draws a Pillow canvas to an Inky screen."""
 
     MIN_RENDER_INTERVAL: int = 60

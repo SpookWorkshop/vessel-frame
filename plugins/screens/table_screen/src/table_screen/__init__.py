@@ -22,7 +22,7 @@ PROFILE_STANDARD_MIN = 480
 FETCH_LIMIT = 500
 
 
-class TableScreen(ScreenPlugin):
+class TableScreen:
     """Screen showing a broadsheet table of recently observed vessels.
 
     The screen class is an orchestrator that tracks the current vessel and on each
