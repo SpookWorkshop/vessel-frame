@@ -3,6 +3,7 @@
 *.egg*
 config.toml
 *.log
+*.log.*
 *.sqlite
 **/.secrets
 data
