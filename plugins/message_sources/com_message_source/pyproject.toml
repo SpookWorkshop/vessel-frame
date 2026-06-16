@@ -1,11 +1,14 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "com-message-source"
-version = "0.0.0"
-requires-python = ">=3.10"
+version = "0.1.0"
+description = "Serial (COM port) AIS message source plugin for Vessel Frame."
+license = "GPL-3.0-only"
+authors = [{ name = "Spook Workshop" }]
+requires-python = ">=3.11"
 dependencies = ["vessel-frame-core", "pyserial-asyncio"]
 
 [tool.setuptools.packages.find]
@@ -16,3 +19,7 @@ com_message_source = "com_message_source:make_plugin"
 
 [project.entry-points."vesselframe.config.schemas"]
 com_message_source = "com_message_source:get_config_schema"
+
+[project.urls]
+Homepage = "https://github.com/SpookWorkshop/vessel-frame"
+Repository = "https://github.com/SpookWorkshop/vessel-frame"

@@ -1,11 +1,14 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "image-renderer"
-version = "0.0.0"
-requires-python = ">=3.10"
+version = "0.1.0"
+description = "PNG image renderer plugin for Vessel Frame."
+license = "GPL-3.0-only"
+authors = [{ name = "Spook Workshop" }]
+requires-python = ">=3.11"
 dependencies = ["vessel-frame-core", "pillow>=12.0.0"]
 
 [tool.setuptools.packages.find]
@@ -16,3 +19,7 @@ image_renderer = "image_renderer:make_plugin"
 
 [project.entry-points."vesselframe.config.schemas"]
 image_renderer = "image_renderer:get_config_schema"
+
+[project.urls]
+Homepage = "https://github.com/SpookWorkshop/vessel-frame"
+Repository = "https://github.com/SpookWorkshop/vessel-frame"
