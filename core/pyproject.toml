@@ -1,11 +1,24 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "vessel-frame-core"
-version = "0.0.0"
+version = "0.1.0"
+description = "Core services and plugin framework for Vessel Frame, an extensible AIS ship-tracking display for Raspberry Pi."
 requires-python = ">=3.11"
+license = "GPL-3.0-only"
+authors = [{ name = "Spook Workshop" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: GIS",
+]
 dependencies = [
     "tomli-w>=1.2.0",
     "aiosqlite>=0.21.0",
@@ -22,6 +35,10 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
 ]
+
+[project.urls]
+Homepage = "https://github.com/SpookWorkshop/vessel-frame"
+Repository = "https://github.com/SpookWorkshop/vessel-frame"
 
 [project.scripts]
 vf = "vf_core.main:main"

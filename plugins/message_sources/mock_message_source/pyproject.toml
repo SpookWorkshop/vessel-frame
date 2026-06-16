@@ -1,11 +1,14 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "mock-message-source"
-version = "0.0.0"
-requires-python = ">=3.10"
+version = "0.1.0"
+description = "Mock AIS message source plugin for Vessel Frame. Emits pre-recorded NMEA sentences for testing."
+license = "GPL-3.0-only"
+authors = [{ name = "Spook Workshop" }]
+requires-python = ">=3.11"
 dependencies = ["vessel-frame-core"]
 
 [tool.setuptools.packages.find]
@@ -13,3 +16,7 @@ where = ["src"]
 
 [project.entry-points."vesselframe.plugins.messagesource"]
 mock_message_source = "mock_message_source:make_plugin"
+
+[project.urls]
+Homepage = "https://github.com/SpookWorkshop/vessel-frame"
+Repository = "https://github.com/SpookWorkshop/vessel-frame"
