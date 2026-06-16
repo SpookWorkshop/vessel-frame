@@ -36,10 +36,11 @@ jobs:
           pip install ./core
           pip install \
             ./plugins/message_sources/mock_message_source \
+            ./plugins/message_sources/udp_message_source \
             ./plugins/message_processors/ais_decoder_processor \
             ./plugins/renderers/image_renderer
       - name: Import smoke test
-        run: python -c "import vf_core.main, mock_message_source, ais_decoder_processor, image_renderer"
+        run: python -c "import vf_core.main, mock_message_source, udp_message_source, ais_decoder_processor, image_renderer"
 
   test:
     name: Tests (py${{ matrix.python-version }})
