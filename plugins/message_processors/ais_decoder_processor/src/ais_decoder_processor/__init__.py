@@ -178,10 +178,17 @@ class AISDecoderProcessor:
         """Receive AIS messages from the bus and enqueue them for decoding."""
         try:
             async for msg in self._bus.subscribe(self._in_topic):
-                if isinstance(msg, str):
-                    msg = msg.encode("utf-8")
+                if isinstance(msg, bytes):
+                    msg = msg.decode("utf-8", errors="ignore")
 
-                self._message_queue.put_line(msg)
+                # Some sources push multipart messages as one bus
+                # message with multiple lines. Need to split and
+                # deal with them as two single messages
+                for line in msg.splitlines():
+                    line = line.strip()
+                    if line:
+                        self._message_queue.put_line(line.encode("utf-8"))
+
                 await asyncio.sleep(0)
         except asyncio.CancelledError:
             self._logger.info("Receive loop cancelled")
