@@ -7,17 +7,23 @@ Vessel Frame's functionality is provided almost entirely through plugins. This p
 ### Message Sources
 | Plugin Name | Created By | Link | Description |
 |-------------|------------|------|-------------|
-| com_message_source | Spook | Built In | For reading AIS data over USB |
-| daisy_message_source | Spook | Built In | For reading AIS data over I2C from a dAISy Mini/FeatherWing |
+| udp_message_source | Spook | Built In | For reading raw AIS data over UDP, for example a network source or aiscatcher output |
+| serial_message_source | Spook | Built In | For reading AIS data over USB |
+| daisy_message_source | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-plugins/tree/main/sources/daisy-message-source) | For reading AIS data over I2C from a dAISy Mini/FeatherWing |
+| aisstreamio_message_source | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-plugins/tree/main/sources/aisstreamio-message-source) | Combined Source+Decoder for streaming from aisstream.io (requires API key) |
 | mock_message_source | Spook | Built In | For testing without a real receiver or in low traffic volume areas. Pre-recorded real AIS strings are output at randomised intervals in a loop. IMPORTANT: Ensure this data is never used for testing connections with a real tracking service |
-| udp_message_source | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-udp-message-source) | For reading raw AIS data over UDP, for example a network source or aiscatcher output |
 
 ### Message Processors
 | Plugin Name | Created By | Link | Description |
 |-------------|------------|------|-------------|
 | ais_decoder_processor | Spook | Built In | Decoder for all AIS message types which outputs the data in a dictionary |
-| aisstream_decoder_processor | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-aisstreamio-message-processor) | Combined Source+Decoder for streaming from aisstream.io (requires API key) |
 | udp_message_forwarder | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-udp-message-forwarder) | Forward raw AIS data elsewhere over UDP, for example to a VesselFinder or MarineTraffic station sink |
+
+### Message Forwarders
+| Plugin Name | Created By | Link | Description |
+|-------------|------------|------|-------------|
+| udp-message-forwarder | Spook | [Github](https://github.com/SpookWorkshop/vessel-frame-plugins/tree/main/processors/udp-message-forwarder) | Forward raw AIS data to a UDP listener. This is the mechanism most data brokers (eg MarineTraffic, VesselFinder, AISHub etc) use for receiving data |
+
 
 ### Screens
 | Plugin Name | Created By | Link | Description |
