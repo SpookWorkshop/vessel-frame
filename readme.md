@@ -256,3 +256,11 @@ At the end of the file add the following. It is correct that this is commented o
 # Allow manual management of wlan0 for AP/Client switching
 # denyinterfaces wlan0
 ```
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, running the tests and linter, and how to write a plugin.
+
+## License
+
+Vessel Frame is licensed under the GNU General Public License v3.0 only (GPL-3.0-only). See [LICENSE](LICENSE) for the full text.

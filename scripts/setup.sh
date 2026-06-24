@@ -7,10 +7,17 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Colour
 
+section() { echo ""; echo -e "${GREEN}$1${NC}"; }
+note()    { echo -e "${YELLOW}$1${NC}"; }
+
 echo -e "${GREEN}=== Vessel Frame Setup ===${NC}"
 echo ""
 
-# Check we're in the right directory
+# ---------------------------------------------------------------------------
+# Sanity checks
+# ---------------------------------------------------------------------------
+
+# Must be run from the repo root
 if [ ! -f "scripts/setup.sh" ]; then
     echo -e "${RED}Error: This script must be run from the vessel-frame directory${NC}"
     echo "Please run: cd vessel-frame && bash scripts/setup.sh"
@@ -24,258 +31,198 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 
-# Check if running on a Raspberry Pi
+confirm_unsupported() {
+    read -p "Continue anyway? [y/N] " -n 1 -r; echo
+    [[ $REPLY =~ ^[Yy]$ ]] || { echo "Setup cancelled"; exit 0; }
+}
+
+# Raspberry Pi check
 if [ ! -f /proc/device-tree/model ]; then
-    echo -e "${YELLOW}Warning: Cannot detect device model${NC}"
-    echo "This script is designed for Raspberry Pi hardware"
-    read -p "Continue anyway? [y/N] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Setup cancelled"
-        exit 0
-    fi
+    note "Warning: cannot detect device model. This script targets Raspberry Pi hardware."
+    confirm_unsupported
 elif ! grep -q "Raspberry Pi" /proc/device-tree/model; then
-    echo -e "${YELLOW}Warning: This does not appear to be a Raspberry Pi${NC}"
-    echo "Detected: $(cat /proc/device-tree/model)"
-    echo "This script is designed for Raspberry Pi hardware"
-    read -p "Continue anyway? [y/N] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Setup cancelled"
-        exit 0
-    fi
+    note "Warning: this does not appear to be a Raspberry Pi (detected: $(tr -d '\0' < /proc/device-tree/model))."
+    confirm_unsupported
 fi
 
 # Check OS version
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     if [[ "$VERSION_CODENAME" != "trixie" ]]; then
-        echo -e "${YELLOW}Warning: Unsupported OS version detected${NC}"
-        echo "Expected: Debian Trixie"
-        echo "Detected: $PRETTY_NAME (codename: $VERSION_CODENAME)"
-        echo "The installation may not work correctly"
-        read -p "Continue anyway? [y/N] " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "Setup cancelled"
-            exit 0
-        fi
+        note "Warning: expected Debian Trixie, detected $PRETTY_NAME (codename: $VERSION_CODENAME)."
+        confirm_unsupported
     fi
 else
-    echo -e "${YELLOW}Warning: Cannot detect OS version${NC}"
-    read -p "Continue anyway? [y/N] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Setup cancelled"
-        exit 0
-    fi
+    note "Warning: cannot detect OS version."
+    confirm_unsupported
 fi
 
-echo -e "${YELLOW}This script will set up Vessel Frame on your Raspberry Pi${NC}"
-echo "It will:"
-echo "  - Install system dependencies"
-echo "  - Enable I2C and SPI"
-echo "  - Set up a Python virtual environment"
-echo "  - Install core and plugins"
-echo "  - Create /var/lib/vessel-frame data directory"
-echo "  - Configure systemd services"
-echo ""
-read -p "Continue? [y/N] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Setup cancelled"
-    exit 0
+# whiptail drives the menus. It ships with Raspberry Pi OS but install as a safety net
+if ! command -v whiptail >/dev/null 2>&1; then
+    note "Installing whiptail (needed for the setup menus)..."
+    sudo apt update && sudo apt install -y whiptail
 fi
 
-echo ""
-echo -e "${GREEN}Step 1: Installing system dependencies${NC}"
+# ---------------------------------------------------------------------------
+# Collect all choices up front
+# ---------------------------------------------------------------------------
+
+cancelled() { echo "Setup cancelled"; exit 0; }
+
+AIS_SOURCE=$(whiptail --title "AIS Source" --radiolist \
+    "Choose your AIS data source:" 12 74 2 \
+    rtlsdr "RTL-SDR dongle via AIS-catcher" ON \
+    skip   "I'll configure my own source later"    OFF \
+    3>&1 1>&2 2>&3) || cancelled
+
+RENDERER=$(whiptail --title "Display Renderer" --radiolist \
+    "Choose your display renderer:" 12 74 3 \
+    inky  "Pimoroni Inky e-ink display"            ON \
+    image "PNG image output (no display hardware)" OFF \
+    skip  "I'll configure my own renderer later"   OFF \
+    3>&1 1>&2 2>&3) || cancelled
+
+# --separate-output makes the checklist print one tag per line (no quoting)
+SCREENS=$(whiptail --title "Screens" --separate-output --checklist \
+    "Select screens to install (SPACE toggles, ENTER confirms):" 12 74 3 \
+    table "Vessel table"                ON \
+    zone  "Zone proximity (needs a Mapbox key)"      OFF \
+    map   "Map view (needs a Mapbox key)" OFF \
+    3>&1 1>&2 2>&3) || cancelled
+
+if whiptail --title "Button Controller" --yesno \
+    "Install the button controller for physical navigation buttons?" 8 74; then
+    INSTALL_BUTTON=yes
+else
+    INSTALL_BUTTON=no
+fi
+
+if whiptail --title "Network Service" --yesno \
+    "Install the WiFi AP/client network-mode service?\n\nRecommended for headless setups so you can switch the device between hotspot and home-WiFi modes." 11 74; then
+    INSTALL_NETWORK=yes
+else
+    INSTALL_NETWORK=no
+fi
+
+# Summary + single confirmation
+SCREEN_LIST=$(echo $SCREENS | tr '\n' ' ')
+[ -z "$SCREEN_LIST" ] && SCREEN_LIST="(none)"
+whiptail --title "Confirm" --yesno \
+"About to install Vessel Frame with:
+
+  AIS source:  $AIS_SOURCE
+  Renderer:    $RENDERER
+  Screens:     $SCREEN_LIST
+  Button:      $INSTALL_BUTTON
+  Network svc: $INSTALL_NETWORK
+
+This will install system packages, set up a virtualenv, and configure
+systemd services. Proceed?" 18 74 || cancelled
+
+# ---------------------------------------------------------------------------
+# Install
+# ---------------------------------------------------------------------------
+
+section "Step 1: Installing system dependencies"
+APT_PKGS="python3-dev git curl"
+[ "$INSTALL_NETWORK" = yes ] && APT_PKGS="$APT_PKGS dnsmasq hostapd"
 sudo apt update
-sudo apt install -y python3.13-dev dnsmasq hostapd
+sudo apt install -y $APT_PKGS
 
-echo -e "${GREEN}System dependencies installed${NC}"
-
-echo ""
-echo -e "${GREEN}Step 2: Enabling I2C and SPI${NC}"
-
-# Enable I2C and SPI using raspi-config (0 = enabled)
-sudo raspi-config nonint do_i2c 0
-sudo raspi-config nonint do_spi 0
-
-echo -e "${GREEN}I2C and SPI enabled${NC}"
-
-# Add SPI overlay to boot config if not already present
-echo -e "${GREEN}Step 3: Configuring boot settings${NC}"
-
-if ! grep -q "dtoverlay=spi0-0cs" /boot/firmware/config.txt; then
-    echo "dtoverlay=spi0-0cs" | sudo tee -a /boot/firmware/config.txt > /dev/null
-    echo -e "${GREEN}Added SPI overlay to boot config${NC}"
-else
-    echo -e "${YELLOW}SPI overlay already present in boot config${NC}"
-fi
-
-echo ""
-echo -e "${GREEN}Step 4: Updating repository${NC}"
-
-# Check if there are uncommitted changes
-if ! git diff-index --quiet HEAD --; then
-    echo -e "${YELLOW}Warning: You have uncommitted changes in the repository${NC}"
-    read -p "Skip git pull? [Y/n] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-        echo -e "${YELLOW}Skipping git pull${NC}"
+# I2C/SPI are only needed for the Inky display
+if [ "$RENDERER" = inky ]; then
+    section "Step 2: Enabling I2C and SPI for the Inky display"
+    sudo raspi-config nonint do_i2c 0
+    sudo raspi-config nonint do_spi 0
+    if ! grep -q "dtoverlay=spi0-0cs" /boot/firmware/config.txt; then
+        echo "dtoverlay=spi0-0cs" | sudo tee -a /boot/firmware/config.txt > /dev/null
+        echo -e "${GREEN}Added SPI overlay to boot config${NC}"
     else
-        git pull
-        echo -e "${GREEN}Repository updated${NC}"
+        note "SPI overlay already present in boot config"
     fi
-else
-    git pull
-    echo -e "${GREEN}Repository updated${NC}"
 fi
 
-echo ""
-echo -e "${GREEN}Step 5: Setting up Python virtual environment${NC}"
+# RTL-SDR + AIS-catcher
+if [ "$AIS_SOURCE" = rtlsdr ]; then
+    section "Step 3: Installing AIS-catcher (RTL-SDR decoder)"
+    # Official installer: pulls SDR libraries, builds AIS-catcher, and sets up
+    # the ais-catcher.service systemd unit.
+    curl -fsSL https://raw.githubusercontent.com/jvde-github/AIS-catcher/main/scripts/aiscatcher-install -o /tmp/aiscatcher-install
+    sudo bash /tmp/aiscatcher-install -p
+    rm -f /tmp/aiscatcher-install
 
-# Create venv if it doesn't exist
+    # Stop the kernel DVB-T driver from claiming the RTL-SDR dongle.
+    echo "blacklist dvb_usb_rtl28xxu" | sudo tee /etc/modprobe.d/blacklist-rtl-sdr.conf > /dev/null
+
+    # Point AIS-catcher's output at our UDP source on localhost.
+    sudo mkdir -p /etc/AIS-catcher
+    echo "-u 127.0.0.1 10110" | sudo tee /etc/AIS-catcher/config.cmd > /dev/null
+
+    sudo systemctl enable ais-catcher.service
+    sudo systemctl restart ais-catcher.service
+    echo -e "${GREEN}AIS-catcher installed and feeding udp://127.0.0.1:10110${NC}"
+else
+    note "Skipping AIS source install. Install and configure one before running Vessel Frame."
+fi
+
+section "Step 4: Updating repository"
+if git diff-index --quiet HEAD -- 2>/dev/null; then
+    git pull && echo -e "${GREEN}Repository updated${NC}"
+else
+    note "Uncommitted changes present, skipping git pull"
+fi
+
+section "Step 5: Setting up Python virtual environment"
 if [ ! -d ".venv" ]; then
     python3 -m venv .venv --system-site-packages
     echo -e "${GREEN}Virtual environment created${NC}"
 else
-    echo -e "${YELLOW}Virtual environment already exists${NC}"
+    note "Virtual environment already exists"
 fi
-
-# Activate venv
 source .venv/bin/activate
 
-echo -e "${GREEN}Virtual environment activated${NC}"
-
-echo ""
-echo -e "${GREEN}Step 6: Installing core and plugins${NC}"
-
-# Always install core and AIS decoder
-echo "Installing vf_core and AIS decoder..."
+section "Step 6: Installing core and plugins"
 pip install ./core
 pip install ./plugins/message_processors/ais_decoder_processor
-echo -e "${GREEN}Core and AIS decoder installed${NC}"
 
-# Ask about hardware
-echo ""
-echo -e "${YELLOW}Hardware Configuration${NC}"
-
-# AIS receiver
-echo ""
-read -p "Are you using a Wegmatt Daisy Mini AIS receiver? [Y/n] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    pip install ./plugins/message_sources/daisy_message_source
-    echo -e "${GREEN}Daisy message source installed${NC}"
-else
-    echo -e "${YELLOW}Skipped - you'll need to install a message source for your AIS receiver${NC}"
+if [ "$AIS_SOURCE" = rtlsdr ]; then
+    pip install ./plugins/message_sources/udp_message_source
 fi
 
-# Display
-echo ""
-read -p "Are you using a Pimoroni Inky display? [Y/n] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+if [ "$RENDERER" = inky ]; then
     pip install ./plugins/renderers/inky_renderer
-    echo -e "${GREEN}Inky renderer installed${NC}"
+elif [ "$RENDERER" = image ]; then
+    pip install ./plugins/renderers/image_renderer
 else
-    echo -e "${YELLOW}Skipped - you'll need to install a renderer for your display${NC}"
+    note "Skipping renderer install. Install and configure one before running Vessel Frame."
 fi
 
-# Ask about screen plugins
-echo ""
-echo -e "${YELLOW}Screen Plugins${NC}"
-echo ""
+for screen in $SCREENS; do
+    screen_dir="./plugins/screens/${screen}_screen"
+    if [ -d "$screen_dir" ]; then
+        pip install "$screen_dir"
+        echo -e "${GREEN}Installed ${screen}_screen${NC}"
+    else
+        echo -e "${RED}Warning: $screen_dir not found, skipping${NC}"
+    fi
+done
 
-SCREENS_DIR="./plugins/screens"
-SCREENS_TO_INSTALL=()
-
-read -p "Install Table Screen plugin? [Y/n] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    SCREENS_TO_INSTALL+=("table_screen")
-fi
-
-read -p "Install Zone Screen plugin? [Y/n] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    SCREENS_TO_INSTALL+=("zone_screen")
-fi
-
-read -p "Install Map Screen plugin? [Y/n] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    SCREENS_TO_INSTALL+=("map_screen")
-fi
-
-SCREEN_COUNT=${#SCREENS_TO_INSTALL[@]}
-
-if [ $SCREEN_COUNT -gt 0 ]; then
-    for screen in "${SCREENS_TO_INSTALL[@]}"; do
-        if [ -d "$SCREENS_DIR/$screen" ]; then
-            pip install "$SCREENS_DIR/$screen"
-            echo -e "${GREEN}$screen installed${NC}"
-        else
-            echo -e "${RED}Warning: $screen not found in $SCREENS_DIR, skipping${NC}"
-        fi
-    done
-else
-    echo -e "${YELLOW}No screens selected. You'll need to install at least one screen for the vessel frame to be useful.${NC}"
-fi
-
-# Ask about button controller
-echo ""
-read -p "Install Button Controller? (recommended if your device has physical buttons) [Y/n] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+if [ "$INSTALL_BUTTON" = yes ]; then
     pip install ./plugins/controllers/button_controller
-    echo -e "${GREEN}Button Controller installed${NC}"
-    if [ $SCREEN_COUNT -le 1 ]; then
-        echo -e "${YELLOW}Note: Button controller is most useful with multiple screens${NC}"
-    fi
-else
-    if [ $SCREEN_COUNT -gt 1 ]; then
-        echo -e "${YELLOW}Note: You have multiple screens but no navigation controller${NC}"
-    fi
+    echo -e "${GREEN}Button controller installed${NC}"
 fi
+echo -e "${GREEN}Core and plugins installed${NC}"
 
-echo ""
-echo -e "${GREEN}Step 7: Creating configuration directory${NC}"
+section "Step 7: Creating data and config directories"
+# NetworkManager writes here. Core needs it writable even without the network service.
+sudo mkdir -p /etc/vessel-frame
+sudo chown "$USER:$USER" /etc/vessel-frame
+sudo mkdir -p /var/lib/vessel-frame
+sudo chown "$USER:$USER" /var/lib/vessel-frame
+sudo chmod 700 /var/lib/vessel-frame
+echo -e "${GREEN}Directories ready${NC}"
 
-if [ ! -d "/etc/vessel-frame" ]; then
-    sudo mkdir -p /etc/vessel-frame
-    sudo chown $USER:$USER /etc/vessel-frame
-    echo -e "${GREEN}Configuration directory created${NC}"
-else
-    echo -e "${YELLOW}Configuration directory already exists${NC}"
-    # Make sure ownership is correct anyway
-    sudo chown $USER:$USER /etc/vessel-frame
-fi
-
-echo ""
-echo -e "${GREEN}Step 8: Creating data directory${NC}"
-
-if [ ! -d "/var/lib/vessel-frame" ]; then
-    sudo mkdir -p /var/lib/vessel-frame
-    sudo chown $USER:$USER /var/lib/vessel-frame
-    sudo chmod 700 /var/lib/vessel-frame
-    echo -e "${GREEN}Data directory created: /var/lib/vessel-frame${NC}"
-else
-    echo -e "${YELLOW}Data directory already exists${NC}"
-    # Make sure ownership is correct anyway
-    sudo chown $USER:$USER /var/lib/vessel-frame
-fi
-
-echo ""
-echo -e "${GREEN}Step 9: Setting up systemd services${NC}"
-
-# Get the current username and home directory
-USERNAME=$USER
-HOME_DIR=$HOME
-
-# Create the main vessel-frame service
-echo "Creating vessel-frame.service..."
+section "Step 8: Setting up the Vessel Frame service"
 sudo tee /etc/systemd/system/vessel-frame.service > /dev/null <<EOF
 [Unit]
 Description=Vessel Frame
@@ -283,9 +230,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=$USERNAME
-WorkingDirectory=$HOME_DIR/vessel-frame
-ExecStart=$HOME_DIR/vessel-frame/.venv/bin/vf
+User=$USER
+WorkingDirectory=$HOME/vessel-frame
+ExecStart=$HOME/vessel-frame/.venv/bin/vf
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -294,21 +241,17 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 EOF
-
 sudo systemctl daemon-reload
 sudo systemctl enable vessel-frame.service
-echo -e "${GREEN}vessel-frame.service created and enabled${NC}"
+echo -e "${GREEN}vessel-frame.service enabled${NC}"
 
-# Network mode service
-echo ""
-echo "Setting up network mode service..."
+# Network mode service (optional)
+if [ "$INSTALL_NETWORK" = yes ]; then
+    section "Step 9: Setting up the network-mode service"
+    sudo cp ./scripts/network_mode_service.py /usr/local/bin/vessel-frame-network-mode-service
+    sudo chmod +x /usr/local/bin/vessel-frame-network-mode-service
 
-# Copy the network mode script
-sudo cp ./scripts/network_mode_service.py /usr/local/bin/vessel-frame-network-mode-service
-sudo chmod +x /usr/local/bin/vessel-frame-network-mode-service
-
-# Create the network mode service
-sudo tee /etc/systemd/system/vessel-frame-network-mode.service > /dev/null <<EOF
+    sudo tee /etc/systemd/system/vessel-frame-network-mode.service > /dev/null <<EOF
 [Unit]
 Description=Vessel Frame Network Boot Configuration
 Before=vessel-frame.service
@@ -326,77 +269,59 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 EOF
+    sudo systemctl daemon-reload
+    sudo systemctl enable vessel-frame-network-mode.service
 
-sudo systemctl daemon-reload
-sudo systemctl enable vessel-frame-network-mode.service
-echo -e "${GREEN}vessel-frame-network-mode.service created and enabled${NC}"
-
-# Set up sudoers permissions
-echo "Configuring sudo permissions for network management..."
-sudo tee /etc/sudoers.d/vessel-frame > /dev/null <<EOF
-$USERNAME ALL=(ALL) NOPASSWD: /usr/sbin/ip
-$USERNAME ALL=(ALL) NOPASSWD: /usr/sbin/iwlist
-$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hostapd
-$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop hostapd
-$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl start hostapd
-$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq
-$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop dnsmasq
-$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl start dnsmasq
-$USERNAME ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dhcpcd
+    sudo tee /etc/sudoers.d/vessel-frame > /dev/null <<EOF
+$USER ALL=(ALL) NOPASSWD: /usr/sbin/ip
+$USER ALL=(ALL) NOPASSWD: /usr/sbin/iwlist
+$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hostapd
+$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop hostapd
+$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start hostapd
+$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq
+$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop dnsmasq
+$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start dnsmasq
+$USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dhcpcd
 EOF
+    sudo chmod 0440 /etc/sudoers.d/vessel-frame
 
-# Set correct permissions on sudoers file
-sudo chmod 0440 /etc/sudoers.d/vessel-frame
+    # hostapd: point the daemon at our config path
+    if grep -q "^DAEMON_CONF=" /etc/default/hostapd; then
+        sudo sed -i 's|^DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+    else
+        sudo sed -i 's|^#DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+    fi
 
-echo -e "${GREEN}Sudo permissions configured${NC}"
-
-echo ""
-echo -e "${GREEN}Step 10: Configuring hostapd and dhcpcd${NC}"
-
-# Configure hostapd
-echo "Configuring hostapd..."
-if grep -q "^DAEMON_CONF=" /etc/default/hostapd; then
-    # Case 1: Line exists and is already uncommented
-    sudo sed -i 's|^DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
-else
-    # Case 2: Line doesn't exist OR is commented
-    sudo sed -i 's|^#DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
+    # dhcpcd: leave a commented hint our network script manages at runtime
+    if ! grep -q "denyinterfaces wlan0" /etc/dhcpcd.conf; then
+        {
+            echo ""
+            echo "# Allow manual management of wlan0 for AP/Client switching"
+            echo "# denyinterfaces wlan0"
+        } | sudo tee -a /etc/dhcpcd.conf > /dev/null
+    fi
+    echo -e "${GREEN}Network-mode service configured${NC}"
 fi
 
-echo -e "${GREEN}hostapd configured${NC}"
+# ---------------------------------------------------------------------------
+# Done
+# ---------------------------------------------------------------------------
 
-# Configure dhcpcd
-echo "Configuring dhcpcd..."
-if ! grep -q "denyinterfaces wlan0" /etc/dhcpcd.conf; then
-    echo "" | sudo tee -a /etc/dhcpcd.conf > /dev/null
-    echo "# Allow manual management of wlan0 for AP/Client switching" | sudo tee -a /etc/dhcpcd.conf > /dev/null
-    echo "# denyinterfaces wlan0" | sudo tee -a /etc/dhcpcd.conf > /dev/null
-    echo -e "${GREEN}dhcpcd configured${NC}"
-else
-    echo -e "${YELLOW}dhcpcd already configured${NC}"
-fi
-
+section "=== Setup Complete! ==="
 echo ""
-echo -e "${GREEN}=== Setup Complete! ===${NC}"
-echo ""
-echo "Vessel Frame has been installed and configured."
-echo "The system needs to reboot to apply all changes."
+echo "Vessel Frame is installed. A reboot is needed to apply all changes."
 echo ""
 echo "After reboot:"
-echo "  1. The vessel-frame service will start automatically"
-echo "  2. Access the admin panel at http://$(hostname -I | awk '{print $1}'):8000"
-echo "  3. Enable your installed plugins through the admin panel"
-echo "  4. The display should update once vessels are in range"
+echo "  1. The vessel-frame service starts automatically."
+echo "  2. Open the admin panel at http://$(hostname -I | awk '{print $1}'):8000"
+echo "  3. Enable your installed plugins there (and set zone/Mapbox details if you"
+echo "     installed the zone or map screens)."
+echo "  4. The display updates once vessels are in range."
 echo ""
-read -p "Reboot now? [Y/n] " -n 1 -r
-echo
-
+read -p "Reboot now? [Y/n] " -n 1 -r; echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     echo "Rebooting..."
     sudo reboot
 else
-    echo ""
-    echo -e "${YELLOW}Reboot postponed${NC}"
-    echo "Remember to reboot before running Vessel Frame:"
-    echo "  sudo reboot"
+    note "Reboot postponed, reboot before starting Vessel Frame."
 fi
