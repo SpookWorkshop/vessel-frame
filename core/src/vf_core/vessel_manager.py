@@ -230,7 +230,7 @@ class VesselManager:
         """
         Calculate the great-circle distance between two coordinates.
 
-        Uses the haversine formula to compute the distance in kilometres.
+        Uses the haversine formula to compute the distance in metres.
 
         Args:
             lat1 (float): Latitude of the first point in decimal degrees.
@@ -239,7 +239,7 @@ class VesselManager:
             lon2 (float): Longitude of the second point in decimal degrees.
 
         Returns:
-            float: Distance between the two coordinates in kilometres.
+            float: Distance between the two coordinates in metres.
         """
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
@@ -252,8 +252,8 @@ class VesselManager:
         )
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-        EARTH_RADIUS = 6371.0
-        return EARTH_RADIUS * c
+        EARTH_RADIUS_M = 6_371_000.0
+        return EARTH_RADIUS_M * c
 
     def _check_zones(self, ship_lat: float, ship_lon: float) -> str | None:
         """
@@ -277,13 +277,14 @@ class VesselManager:
 
             if distance <= zone["radius"]:
                 self._logger.debug(
-                    f"Vessel in zone '{zone['name']}' (distance: {distance:.2f}km)"
+                    f"Vessel in zone '{zone['name']}' (distance: {distance:.0f}m)"
                 )
                 return zone["name"]
 
         return None
 
     def register_zone(self, zone_name, zone_lat, zone_lon, zone_rad):
+        """Register a circular monitoring zone. zone_rad is in metres."""
         self._zones.append(
             {"name": zone_name, "lat": zone_lat, "lon": zone_lon, "radius": zone_rad}
         )
